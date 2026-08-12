@@ -1,0 +1,41 @@
+<?php
+
+$page = static fn (string $group, string $title, string $path, string $description, array $features = []) => compact('group', 'title', 'path', 'description', 'features');
+
+return [
+    'pages' => [
+        $page('工作台', '品牌资料', '/workspace/brand', '维护品牌定位、受众、卖点和内容规范。', ['品牌档案', '受众画像', '内容规范']),
+        $page('工作台', '亚马逊运营 ERP', '/ecommerce/amazon', '订单、广告和商品表现统一分析。', ['订单趋势', 'SP 广告', 'SB 广告', '监控链接']),
+        $page('工作台', 'Shopify 独立站', '/ecommerce/shopify', '独立站销售、订单和商品数据分析。', ['GMV', '订单', '客单价', '商品表现']),
+        $page('工作台', '学生折扣', '/ecommerce/student-discounts', '管理学生认证活动、折扣码和领取记录。', ['活动配置', '认证方式', '领取记录']),
+        $page('工作台', '活动主题', '/ads/campaign', '统一规划跨渠道营销活动主题。', ['活动日历', '渠道协同', '素材状态']),
+        $page('工作台', 'AI 营销大脑', '/workspace/ai-brain', '基于业务上下文生成洞察、建议和营销计划。', ['AI 对话', '提示词模板', '记忆库', '建议中心']),
+        $page('付费广告', '广告目标', '/ads/target', '管理平台目标、预算和完成进度。', ['目标总览', '预算追踪', '周报']),
+        $page('付费广告', 'Facebook Ads', '/ads/facebook', 'Facebook 广告活动、广告组和素材表现。', ['账户概览', 'Campaign', 'Ad Set', 'Creative']),
+        $page('付费广告', 'Google Ads', '/ads/google', 'Google Ads 花费、转化和关键词分析。', ['账户概览', 'Campaign', '关键词', '搜索词']),
+        $page('付费广告', 'TikTok Ads', '/ads/tiktok', 'TikTok 广告消耗、转化和创意分析。', ['账户概览', 'Campaign', 'Ad Group', 'Creative']),
+        $page('付费广告', 'Bing Ads', '/ads/bing', 'Microsoft Advertising 账户和搜索广告分析。', ['账户概览', 'Campaign', '关键词']),
+        $page('付费广告', 'Criteo', '/ads/criteo', 'Criteo 再营销广告与商品表现。', ['账户概览', 'Campaign', '商品表现']),
+        $page('自然流量', 'SEO / GEO', '/organic/seo', 'SEO、GSC、GA 和生成式搜索表现。', ['月报', '周报', '日报', 'GSC 明细']),
+        $page('自然流量', '每日官媒运营复盘台', '/organic/social', '社媒内容排期、发布和复盘。', ['内容日历', '周报', '每日复盘', 'YouTube 授权']),
+        $page('自然流量', '红人运营', '/organic/kol', '红人发现、筛选、推荐和合作管理。', ['Prospect', '推荐批次', '合作进度']),
+        $page('自然流量', 'EDM 邮件营销', '/organic/edm', '邮件营销目标、活动和效果跟踪。', ['发送计划', '受众', '效果分析']),
+        $page('自然流量', '联盟营销看板', '/organic/affiliate', '联盟渠道、伙伴与佣金效果管理。', ['伙伴管理', '转化', '佣金']),
+        $page('中台', '视觉设计', '/ecommerce/design', '设计需求、交付物和排期协同。', ['需求池', '设计排期', '交付审核']),
+        $page('舆情监控', '舆情总览', '/reputation/overview', '聚合评论、帖子、风险和资源数据。', ['评论漏斗', '情感分析', '风险趋势']),
+        $page('舆情监控', 'Google 直评', '/reputation/google-reviews', 'Google 商家评论监控与处理。', ['评论列表', '情感分析', '回复状态']),
+        $page('舆情监控', 'Trustpilot 评价', '/reputation/trustpilot', 'Trustpilot 评论监控与处理。', ['评论列表', '评分趋势', '回复状态']),
+        $page('舆情监控', '官网评论追踪', '/reputation/website-reviews', '官网评论质量、漏斗和处理进度。', ['评论列表', '评分趋势', '审核状态']),
+        $page('舆情监控', 'Reddit 运营', '/reputation/reddit', 'Reddit 品牌讨论与情绪监控。', ['帖子监控', '互动数据', '情绪趋势']),
+        $page('舆情监控', '风险同步', '/reputation/risk-sync', '跨渠道风险识别、分级和闭环。', ['风险列表', '分级', '负责人', '处理状态']),
+        $page('舆情监控', '周报生成', '/reputation/weekly-report', '生成并归档舆情周报。', ['周报生成', '风险摘要', '归档']),
+        $page('协作', '任务看板', '/collab/kanban', '任务创建、分配、优先级和看板流转。', ['看板', '日历', '任务详情', '通知']),
+        $page('协作', '团队成员', '/collab/team', '查看团队成员、角色和任务负载。', ['成员列表', '角色', '任务负载']),
+        $page('人员管理', '人员档案管理', '/employees', '员工账号、状态、角色和店铺访问管理。', ['员工 CRUD', '重置密码', '状态管理', '店铺授权']),
+        $page('人员管理', '系统角色配置', '/roles', '角色与页面权限管理。', ['角色 CRUD', '权限分配', '系统角色']),
+        $page('插件管理', '插件中心', '/plugins', '管理业务集成与插件启用状态。', ['插件列表', '配置', '健康检查']),
+        $page('店铺', '店铺设置', '/store-settings', '店铺凭证、时区、链接和业务配置。', ['基础配置', 'API 凭证', '飞书链接', 'OAuth 状态']),
+        $page('系统设置', '系统配置', '/settings', '系统级参数、邮件、飞书和 AI 配置。', ['系统参数', '邮件测试', '飞书测试', 'AI 配置']),
+        $page('系统设置', '店铺管理', '/stores', '创建、编辑和停用店铺。', ['店铺 CRUD', '成员授权', '状态管理']),
+    ],
+];
