@@ -31,9 +31,20 @@ class DashboardTest extends TestCase
             'createdAt' => now(),
             'updatedAt' => now(),
         ]);
+        DB::table('Store')->insert([
+            'id' => 'default-store',
+            'slug' => 'default',
+            'name' => 'Default Store',
+            'timezone' => 'America/Los_Angeles',
+            'status' => 'ACTIVE',
+            'createdAt' => now(),
+            'updatedAt' => now(),
+        ]);
         $this->actingAs($user);
 
         $response = $this->get(route('dashboard'));
-        $response->assertOk();
+        $response->assertRedirect('/default');
+
+        $this->get('/default')->assertOk();
     }
 }
