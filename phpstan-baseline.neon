@@ -1,0 +1,463 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Parameter \#1 \$string of method Illuminate\\Console\\Command\:\:line\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 4
+			path: app/Console/Commands/AuditExternalSnapshotsCommand.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Console/Commands/AuditExternalSnapshotsCommand.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Console/Commands/AuditExternalSnapshotsCommand.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between non\-empty\-list\<array\<string, mixed\>\> and array\{\} will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Console/Commands/SyncLegacyDataBundleCommand.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\BrandController\:\:sync\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/BrandController.php
+
+		-
+			message: '#^Parameter \#1 \$array \(array\{\}\|array\{0\?\: int\|string\}\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: app/Http/Controllers/BrandController.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/DashboardController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/DashboardController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\DesignController\:\:normalize\(\) has parameter \$row with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/DesignController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\DesignController\:\:normalize\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/DesignController.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/DesignController.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/DesignController.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/EmployeeController.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/EmployeeController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>isDefaultAdmin" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/LegacyApiController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:applyDateRange\(\) has parameter \$query with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:bingAnalytics\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:databasePage\(\) has parameter \$query with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:externalPaths\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:extractTags\(\) should return list\<string\> but returns array\<int, non\-falsy\-string\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:marketingAnalytics\(\) should return array\{metrics\: array\<int, array\{label\: string, value\: string\}\>, rows\: array\<int, mixed\>, trend\: array\<int, float\|int\>, error\?\: string\} but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:pagePayload\(\) has parameter \$paginator with generic class Illuminate\\Pagination\\LengthAwarePaginator but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:syncExternalPage\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_filter expects array, list\<string\>\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_shift expects array, list\<string\>\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<string,mixed\>\:\:filter\(\) expects \(callable\(mixed, string\)\: bool\)\|null, Closure\(mixed, mixed\)\: \(0\|1\|false\) given\.$#'
+			identifier: argument.type
+			count: 4
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 2
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 14
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 14
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Cannot cast Carbon\\CarbonImmutable\|int to int\.$#'
+			identifier: cast.int
+			count: 3
+			path: app/Http/Controllers/ReputationController.php
+
+		-
+			message: '#^Match expression does not handle remaining value\: mixed$#'
+			identifier: match.unhandled
+			count: 1
+			path: app/Http/Controllers/ReputationController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, string\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/ReputationController.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Middleware/EnsurePageAccess.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$isDefaultAdmin\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/EnsurePageAccess.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$role\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/EnsurePageAccess.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$roleId\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/EnsurePageAccess.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/EnsurePageAccess.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Middleware/EnsurePageAccess.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$isDefaultAdmin\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$role\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$roleId\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 4
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 4
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>isDefaultAdmin" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
+			identifier: larastan.noEnvCallsOutsideOfConfig
+			count: 1
+			path: app/Providers/FortifyServiceProvider.php
+
+		-
+			message: '#^Comparison operation "\>" between 2\|10\|15\|50\|4318\|19379\|268483\.61 and 0 is always true\.$#'
+			identifier: greater.alwaysTrue
+			count: 2
+			path: app/Services/DataSync/SeoSnapshotService.php
+
+		-
+			message: '#^Method App\\Services\\DataSync\\SeoSnapshotService\:\:findColumn\(\) has parameter \$names with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/DataSync/SeoSnapshotService.php
+
+		-
+			message: '#^Method App\\Services\\DataSync\\SeoSnapshotService\:\:findColumn\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/DataSync/SeoSnapshotService.php
+
+		-
+			message: '#^Method App\\Services\\DataSync\\SeoSnapshotService\:\:get\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/DataSync/SeoSnapshotService.php
+
+		-
+			message: '#^Method App\\Services\\DataSync\\SeoSnapshotService\:\:goals\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/DataSync/SeoSnapshotService.php
+
+		-
+			message: '#^Method App\\Services\\DataSync\\SeoSnapshotService\:\:sync\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/DataSync/SeoSnapshotService.php
+
+		-
+			message: '#^Offset ''ai_automation''\|''backlinks''\|''blog_clicks''\|''industry_clicks''\|''new_blog''\|''old_blog''\|''seo_gmv'' on array\{new_blog\: float\|int, old_blog\: float\|int, backlinks\: float\|int, ai_automation\: float\|int, seo_gmv\: float, industry_clicks\: float, blog_clicks\: float\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/DataSync/SeoSnapshotService.php
+
+		-
+			message: '#^Offset 1 might not exist on array\{0\: non\-empty\-array, 1\?\: array\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Services/DataSync/SeoSnapshotService.php
+
+		-
+			message: '#^Parameter \#1 \.\.\.\$arg1 of function max expects non\-empty\-array, list given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/DataSync/SeoSnapshotService.php
+
+		-
+			message: '#^Method App\\Services\\Integrations\\FeishuConnector\:\:flattenFields\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Integrations/FeishuConnector.php
+
+		-
+			message: '#^Method App\\Services\\Integrations\\FeishuConnector\:\:spreadsheetRowsFromWiki\(\) should return list\<array\<string, mixed\>\> but returns array\<int, non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Integrations/FeishuConnector.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Services/Integrations/FeishuConnector.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Services/Integrations/FeishuConnector.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 6
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$isDefaultAdmin\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$lastStoreId\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$slug\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Method App\\Services\\Stores\\StoreContext\:\:allStorePaths\(\) should return list\<string\> but returns array\<int, mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Method App\\Services\\Stores\\StoreContext\:\:availableStores\(\) return type with generic class Illuminate\\Support\\Collection does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Method App\\Services\\Stores\\StoreContext\:\:enabledPaths\(\) should return list\<string\> but returns array\<mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, stdClass\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Property App\\Services\\Stores\\StoreContext\:\:\$stores with generic class Illuminate\\Support\\Collection does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Unable to resolve the template type TFlatMapKey in call to method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:flatMap\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Unable to resolve the template type TFlatMapValue in call to method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:flatMap\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Stores/StoreContext.php
+
+		-
+			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
+			identifier: larastan.noEnvCallsOutsideOfConfig
+			count: 3
+			path: database/seeders/DatabaseSeeder.php
+
+		-
+			message: '#^Parameter \#1 \$value of static method Illuminate\\Support\\Facades\\Hash\:\:make\(\) expects string, bool\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: database/seeders/DatabaseSeeder.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: database/seeders/DatabaseSeeder.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: database/seeders/DatabaseSeeder.php

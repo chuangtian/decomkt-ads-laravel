@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Credentials\CredentialService;
+use App\Services\Stores\StoreContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class LegacyApiController extends Controller
 {
+    public function __construct(private readonly CredentialService $credentials, private readonly StoreContext $storeContext) {}
+
     public function __invoke(Request $request, string $path): JsonResponse
     {
         $path = trim($path, '/');
@@ -30,7 +34,7 @@ class LegacyApiController extends Controller
             return response()->json(['stores' => DB::table('Store')->orderBy('name')->get()]);
         }
         if ($path === 'collab/tasks') {
-            return response()->json(DB::table('Task')->where('storeId', 'default-store')->orderBy('dueDate')->get());
+            return response()->json(DB::table('Task')->where('storeId', $this->storeContext->id())->orderBy('dueDate')->get());
         }
         if ($path === 'collab/notifications/unread-count') {
             $employeeId = DB::table('Employee')->where('email', $request->user()?->email)->value('id');
@@ -43,28 +47,28 @@ class LegacyApiController extends Controller
             return response()->json(DB::table('Notification')->where('recipientId', $employeeId)->latest('createdAt')->limit(50)->get());
         }
         if ($path === 'ecommerce/student-discounts') {
-            return response()->json(['campaign' => DB::table('StudentDiscountCampaign')->where('storeId', 'default-store')->first(), 'claims' => DB::table('StudentDiscountClaim')->where('storeId', 'default-store')->latest('createdAt')->limit(100)->get()]);
+            return response()->json(['campaign' => DB::table('StudentDiscountCampaign')->where('storeId', $this->storeContext->id())->first(), 'claims' => DB::table('StudentDiscountClaim')->where('storeId', $this->storeContext->id())->latest('createdAt')->limit(100)->get()]);
         }
         if (str_starts_with($path, 'reputation/reviews')) {
-            return response()->json(['reviews' => DB::table('ReputationReview')->where('storeId', 'default-store')->latest('createdAt')->limit(200)->get()]);
+            return response()->json(['reviews' => DB::table('ReputationReview')->where('storeId', $this->storeContext->id())->latest('createdAt')->limit(200)->get()]);
         }
         if (str_starts_with($path, 'reputation/reddit')) {
-            return response()->json(['posts' => DB::table('RedditPost')->where('storeId', 'default-store')->latest('createdAt')->limit(200)->get()]);
+            return response()->json(['posts' => DB::table('RedditPost')->where('storeId', $this->storeContext->id())->latest('createdAt')->limit(200)->get()]);
         }
         if ($path === 'reputation/risks') {
-            return response()->json(['risks' => DB::table('ReputationRisk')->where('storeId', 'default-store')->latest('createdAt')->get()]);
+            return response()->json(['risks' => DB::table('ReputationRisk')->where('storeId', $this->storeContext->id())->latest('createdAt')->get()]);
         }
         if ($path === 'reputation/resources') {
-            return response()->json(['resources' => DB::table('ReputationResource')->where('storeId', 'default-store')->latest('createdAt')->get()]);
+            return response()->json(['resources' => DB::table('ReputationResource')->where('storeId', $this->storeContext->id())->latest('createdAt')->get()]);
         }
         if (str_starts_with($path, 'workspace/conversations')) {
-            return response()->json(['conversations' => DB::table('AiConversation')->where('storeId', 'default-store')->latest('updatedAt')->get()]);
+            return response()->json(['conversations' => DB::table('AiConversation')->where('storeId', $this->storeContext->id())->latest('updatedAt')->get()]);
         }
         if ($path === 'admin/system-config/status') {
             return response()->json(['configured' => DB::table('SystemConfig')->pluck('key'), 'total' => DB::table('SystemConfig')->count()]);
         }
         if ($path === 'store-settings/oauth-status') {
-            return response()->json(['configured' => DB::table('StoreConfig')->where('storeId', 'default-store')->pluck('key')]);
+            return response()->json(['configured' => DB::table('StoreConfig')->where('storeId', $this->storeContext->id())->pluck('key')]);
         }
 
         $requirements = [
@@ -74,13 +78,13 @@ class LegacyApiController extends Controller
         ];
         $requirement = collect($requirements)->first(fn ($keys, $prefix) => str_starts_with($path, $prefix));
         if ($requirement) {
-            $configured = DB::table('StoreConfig')->where('storeId', 'default-store')->whereIn('key', $requirement)->pluck('key')->all();
+            $configured = array_keys($this->credentials->many($requirement, $this->storeContext->id()));
             $missing = array_values(array_diff($requirement, $configured));
 
             return response()->json(['configured' => count($missing) === 0, 'missing' => $missing, 'data' => []]);
         }
         if (str_starts_with($path, 'feishu/') || str_starts_with($path, 'amazon/')) {
-            $configured = DB::table('StoreConfig')->where('storeId', 'default-store')->whereIn('key', ['FEISHU_APP_ID', 'FEISHU_APP_SECRET'])->count() === 2;
+            $configured = count($this->credentials->many(['FEISHU_APP_ID', 'FEISHU_APP_SECRET'], $this->storeContext->id())) === 2;
 
             return response()->json(['configured' => $configured, 'data' => []]);
         }

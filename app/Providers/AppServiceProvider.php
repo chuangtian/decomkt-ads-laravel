@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use App\Services\Credentials\CredentialService;
+use App\Services\Stores\StoreContext;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -15,7 +18,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(CredentialService::class, fn () => new CredentialService(Cache::store()));
+        $this->app->scoped(StoreContext::class, fn ($app) => new StoreContext($app['request']));
     }
 
     /**
