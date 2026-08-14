@@ -9,13 +9,19 @@
         <div class="mb-8 flex items-start justify-between gap-6">
             <div class="space-y-3">
                 <div class="deco-route-skeleton h-8 w-44 rounded-md"></div>
-                <div class="deco-route-skeleton h-4 w-72 max-w-[70vw] rounded"></div>
+                <div
+                    class="deco-route-skeleton h-4 w-72 max-w-[70vw] rounded"
+                ></div>
             </div>
             <div class="deco-route-skeleton h-10 w-28 rounded-md"></div>
         </div>
 
         <div class="mb-5 flex gap-3">
-            <div v-for="index in 3" :key="index" class="deco-route-skeleton h-10 w-28 rounded-md"></div>
+            <div
+                v-for="index in 3"
+                :key="index"
+                class="deco-route-skeleton h-10 w-28 rounded-md"
+            ></div>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -49,11 +55,17 @@
 }
 
 @keyframes deco-route-loading {
-    from { background-position: 100% 0; }
-    to { background-position: -120% 0; }
+    from {
+        background-position: 100% 0;
+    }
+    to {
+        background-position: -120% 0;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .deco-route-skeleton { animation: none; }
+    .deco-route-skeleton {
+        animation: none;
+    }
 }
 </style>
