@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 BASE=/var/www/admin.decomkt.com
-ARCHIVE=/root/deploy_admin/decomkt-multistore-20260814-v6.tar.gz
+ARCHIVE=/root/deploy_admin/decomkt-multistore-20260814-v7.tar.gz
 STAMP="$(date +%Y%m%d%H%M%S)"
 RELEASE="$BASE/releases/$STAMP"
 PREVIOUS="$(readlink -f "$BASE/current")"
