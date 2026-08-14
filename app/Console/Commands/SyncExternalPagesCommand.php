@@ -12,6 +12,7 @@ use Throwable;
 class SyncExternalPagesCommand extends Command
 {
     protected $signature = 'data:sync-external-pages {--only=}';
+
     protected $description = 'Synchronize every external business page into MySQL snapshots';
 
     public function handle(ModuleController $modules, BrandController $brand, StoreContext $storeContext): int
@@ -21,15 +22,19 @@ class SyncExternalPagesCommand extends Command
         foreach (DB::table('Store')->where('status', 'ACTIVE')->pluck('id') as $storeId) {
             $storeContext->setForBackgroundJob($storeId);
             foreach ($paths as $path) {
-                if (! $storeContext->isEnabled($path, $storeId)) continue;
+                if (! $storeContext->isEnabled($path, $storeId)) {
+                    continue;
+                }
                 try {
                     $result = $path === '/workspace/brand' ? $brand->sync() : $modules->syncExternalPage($path);
                     $this->info("{$storeId} {$path} synchronized (".count($result['rows'] ?? $result).' records).');
                 } catch (Throwable $exception) {
-                    $failed = true; $this->error("{$storeId} {$path}: ".$exception->getMessage());
+                    $failed = true;
+                    $this->error("{$storeId} {$path}: ".$exception->getMessage());
                 }
             }
         }
+
         return $failed ? self::FAILURE : self::SUCCESS;
     }
 }

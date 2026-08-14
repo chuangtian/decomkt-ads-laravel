@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\DataSync\SeoSnapshotService;
 use App\Services\Integrations\Ga4Connector;
 use App\Services\Integrations\GscConnector;
-use App\Services\DataSync\SeoSnapshotService;
 use App\Services\Stores\StoreContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;

@@ -13,6 +13,7 @@ class DashboardController extends Controller
     public function __invoke(StoreContext $storeContext): Response
     {
         $storeId = $storeContext->id();
+
         return Inertia::render('Dashboard', [
             'metrics' => [
                 ['label' => '业务数据表', 'value' => count(Schema::getTables()), 'hint' => 'MySQL 8.4'],

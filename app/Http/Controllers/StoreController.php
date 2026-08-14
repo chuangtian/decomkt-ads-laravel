@@ -68,7 +68,9 @@ class StoreController extends Controller
             }
         });
         $request->session()->put('current_store_id', $id);
-        if ($employeeId) DB::table('Employee')->where('id', $employeeId)->update(['lastStoreId' => $id, 'updatedAt' => now()]);
+        if ($employeeId) {
+            DB::table('Employee')->where('id', $employeeId)->update(['lastStoreId' => $id, 'updatedAt' => now()]);
+        }
 
         return redirect('/stores')->with('success', '店铺已创建并切换为当前店铺');
     }

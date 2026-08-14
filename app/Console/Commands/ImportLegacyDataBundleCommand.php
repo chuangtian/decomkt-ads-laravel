@@ -93,6 +93,7 @@ class ImportLegacyDataBundleCommand extends Command
                         "\x0c" => '\\f',
                         default => sprintf('\\u%04x', ord($character)),
                     };
+
                     continue;
                 }
 

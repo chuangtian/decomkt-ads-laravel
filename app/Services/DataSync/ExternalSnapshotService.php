@@ -20,12 +20,14 @@ class ExternalSnapshotService
     {
         $key = $this->key($key, $storeId);
         $payload = DB::table('ExternalDataSnapshot')->where('key', $key)->value('payload');
+
         return $payload ? json_decode($payload, true, 512, JSON_THROW_ON_ERROR) : $default;
     }
 
     public function status(string $key, string $storeId = 'default-store'): ?object
     {
         $key = $this->key($key, $storeId);
+
         return DB::table('ExternalDataSnapshot')->where('key', $key)->first(['recordCount', 'syncedAt', 'lastError']);
     }
 

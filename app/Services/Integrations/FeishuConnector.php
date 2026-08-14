@@ -3,8 +3,8 @@
 namespace App\Services\Integrations;
 
 use App\Services\Credentials\CredentialService;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class FeishuConnector
 {
@@ -64,8 +64,12 @@ class FeishuConnector
         $pageToken = null;
         do {
             $query = ['page_size' => 500, 'text_field_as_array' => 'true'];
-            if ($viewId !== '') $query['view_id'] = $viewId;
-            if ($pageToken) $query['page_token'] = $pageToken;
+            if ($viewId !== '') {
+                $query['view_id'] = $viewId;
+            }
+            if ($pageToken) {
+                $query['page_token'] = $pageToken;
+            }
             $data = $this->get('/bitable/v1/apps/'.$appToken.'/tables/'.$tableId.'/records?'.http_build_query($query), $storeId)['data'] ?? [];
             foreach ($data['items'] ?? [] as $item) {
                 $records[] = ['record_id' => $item['record_id'], ...$this->flattenFields($item['fields'] ?? [])];
@@ -81,19 +85,28 @@ class FeishuConnector
     {
         $node = $this->get('/wiki/v2/spaces/get_node?'.http_build_query(['token' => $wikiNode]), $storeId);
         $spreadsheetToken = $node['data']['node']['obj_token'] ?? null;
-        if (! $spreadsheetToken) throw new \RuntimeException('Feishu wiki node has no spreadsheet token.');
+        if (! $spreadsheetToken) {
+            throw new \RuntimeException('Feishu wiki node has no spreadsheet token.');
+        }
         $sheets = $this->get('/sheets/v3/spreadsheets/'.$spreadsheetToken.'/sheets/query', $storeId)['data']['sheets'] ?? [];
         $sheet = collect($sheets)->firstWhere('title', $sheetTitle);
-        if (! $sheet) throw new \RuntimeException("Feishu sheet {$sheetTitle} was not found.");
+        if (! $sheet) {
+            throw new \RuntimeException("Feishu sheet {$sheetTitle} was not found.");
+        }
         $range = rawurlencode($sheet['sheet_id'].'!A1:Z200');
         $values = $this->get('/sheets/v2/spreadsheets/'.$spreadsheetToken.'/values/'.$range.'?valueRenderOption=ToString&dateTimeRenderOption=FormattedString', $storeId)['data']['valueRange']['values'] ?? [];
-        if (count($values) < 2) return [];
+        if (count($values) < 2) {
+            return [];
+        }
         $headers = array_map(fn ($value) => trim((string) ($value ?? '')), $values[0]);
         $columns = array_keys(array_filter($headers, fn ($value) => $value !== ''));
 
         return collect(array_slice($values, 1))->filter(fn ($row) => collect($columns)->contains(fn ($column) => isset($row[$column]) && $row[$column] !== ''))->values()->map(function ($row, $index) use ($headers, $columns) {
             $record = ['record_id' => (string) $index];
-            foreach ($columns as $column) $record[$headers[$column]] = $row[$column] ?? null;
+            foreach ($columns as $column) {
+                $record[$headers[$column]] = $row[$column] ?? null;
+            }
+
             return $record;
         })->all();
     }

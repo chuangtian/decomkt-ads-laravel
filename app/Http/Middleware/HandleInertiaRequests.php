@@ -58,10 +58,12 @@ class HandleInertiaRequests extends Middleware
         $storeNavigation = collect(config('store_navigation.groups'))->map(function (array $group) use ($canAccess, $enabledPaths, $storeContext): array {
             $group['items'] = collect($group['items'])->filter(fn (array $item) => in_array($item['path'], $enabledPaths, true) && $canAccess($item['path']))
                 ->map(fn (array $item) => [...$item, 'href' => $storeContext->url($item['path'])])->values()->all();
+
             return $group;
         })->values()->all();
         $globalNavigation = collect(config('store_navigation.global_groups'))->map(function (array $group) use ($canAccess): array {
             $group['items'] = collect($group['items'])->filter(fn (array $item) => $canAccess($item['path']))->map(fn (array $item) => [...$item, 'href' => $item['path']])->values()->all();
+
             return $group;
         })->filter(fn (array $group) => count($group['items']) > 0)->values()->all();
 

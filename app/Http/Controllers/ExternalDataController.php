@@ -11,8 +11,9 @@ class ExternalDataController extends Controller
     {
         $data = $request->validate(['path' => ['required', 'string']]);
         $count = 0;
-        if ($data['path'] === '/workspace/brand') $count = count($brand->sync());
-        else {
+        if ($data['path'] === '/workspace/brand') {
+            $count = count($brand->sync());
+        } else {
             $result = $modules->syncExternalPage($data['path']);
             $count = count($result['rows'] ?? []);
         }

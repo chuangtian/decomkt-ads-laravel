@@ -16,7 +16,7 @@ use Inertia\Response;
 
 class ModuleController extends Controller
 {
-    private const EXTERNAL_PATHS = ['/ads/campaign','/ads/target','/ecommerce/shopify','/ads/facebook','/ads/google','/ads/tiktok','/ads/bing','/ads/criteo','/organic/kol','/organic/edm','/organic/affiliate'];
+    private const EXTERNAL_PATHS = ['/ads/campaign', '/ads/target', '/ecommerce/shopify', '/ads/facebook', '/ads/google', '/ads/tiktok', '/ads/bing', '/ads/criteo', '/organic/kol', '/organic/edm', '/organic/affiliate'];
 
     /** @var array<string, array<string, mixed>> */
     private array $analyticsCache = [];
@@ -125,7 +125,9 @@ class ModuleController extends Controller
         }
 
         if ($path === '/reputation/reddit') {
-            if ($request->query('detail') !== 'records') return null;
+            if ($request->query('detail') !== 'records') {
+                return null;
+            }
 
             return $this->databasePage(
                 DB::table('RedditPost')
@@ -189,7 +191,7 @@ class ModuleController extends Controller
     }
 
     /** @param array<int, mixed> $rows
-     *  @return array<string, mixed>
+     * @return array<string, mixed>
      */
     private function kolSummary(array $rows): array
     {
@@ -199,6 +201,7 @@ class ModuleController extends Controller
         $comments = $collection->sum(fn ($row) => $this->number($row['评'] ?? 0));
         $names = $collection->flatMap(function ($row) {
             $value = $row['红人title'] ?? null;
+
             return is_array($value) ? $value : [$value];
         })->filter()->unique()->count();
 
@@ -247,7 +250,9 @@ class ModuleController extends Controller
             '/reputation/website-reviews' => 'WEBSITE',
             default => null,
         };
-        if (! $platform) return null;
+        if (! $platform) {
+            return null;
+        }
 
         $base = DB::table('ReputationReview')->where('storeId', $this->storeId())->where('platform', $platform);
         $stats = (clone $base)->selectRaw("COUNT(*) total, COALESCE(AVG(star),0) average, COALESCE(SUM(star >= 4 OR sentiment = 'POSITIVE'),0) positive, COALESCE(SUM(star <= 2 OR sentiment = 'NEGATIVE'),0) negative")->first();
@@ -291,7 +296,9 @@ class ModuleController extends Controller
     /** @return list<string> */
     private function extractTags(mixed $value): array
     {
-        if (! $value) return [];
+        if (! $value) {
+            return [];
+        }
         if (is_string($value)) {
             $decoded = json_decode($value, true);
             $value = is_array($decoded) ? $decoded : preg_split('/[,，]/u', $value);
@@ -309,7 +316,7 @@ class ModuleController extends Controller
     }
 
     /** @param array<int, mixed> $rows
-     *  @return array<string, mixed>
+     * @return array<string, mixed>
      */
     private function arrayPage(array $rows, int $page, int $perPage): array
     {
@@ -363,7 +370,9 @@ class ModuleController extends Controller
             'BING_ADS_CLIENT_ID', 'BING_ADS_CLIENT_SECRET', 'BING_ADS_REFRESH_TOKEN', 'BING_ADS_DEVELOPER_TOKEN', 'BING_ADS_ACCOUNT_ID',
             'CRITEO_API_KEY', 'CRITEO_CLIENT_SECRET', 'FEISHU_APP_ID', 'FEISHU_APP_SECRET', 'YOUTUBE_CLIENT_ID', 'YOUTUBE_CLIENT_SECRET',
         ];
-        if (in_array($path, ['/settings', '/store-settings'], true)) return $all;
+        if (in_array($path, ['/settings', '/store-settings'], true)) {
+            return $all;
+        }
 
         return match ($path) {
             '/ads/facebook' => ['FB_ACCESS_TOKEN'],
@@ -428,20 +437,20 @@ class ModuleController extends Controller
             if ($domain && $token) {
                 try {
                     $orders = (function () use ($domain, $token): array {
-                    $response = Http::withHeaders(['X-Shopify-Access-Token' => $token])->timeout(15)->get('https://'.preg_replace('#^https?://#', '', rtrim($domain, '/')).'/admin/api/2025-01/orders.json', [
-                        'status' => 'any', 'limit' => 250, 'created_at_min' => now()->subDays(30)->toIso8601String(),
-                    ]);
-                    $response->throw();
+                        $response = Http::withHeaders(['X-Shopify-Access-Token' => $token])->timeout(15)->get('https://'.preg_replace('#^https?://#', '', rtrim($domain, '/')).'/admin/api/2025-01/orders.json', [
+                            'status' => 'any', 'limit' => 250, 'created_at_min' => now()->subDays(30)->toIso8601String(),
+                        ]);
+                        $response->throw();
 
-                    return $response->json('orders', []);
+                        return $response->json('orders', []);
                     })();
                     $gmv = collect($orders)->sum(fn (array $order) => (float) ($order['total_price'] ?? 0));
                     $count = count($orders);
                     $result['metrics'] = [
-                    ['label' => 'GMV（近30天）', 'value' => '$'.number_format($gmv, 2)],
-                    ['label' => '订单数', 'value' => number_format($count)],
-                    ['label' => '客单价', 'value' => '$'.number_format($count ? $gmv / $count : 0, 2)],
-                    ['label' => '日均 GMV', 'value' => '$'.number_format($gmv / 30, 2)],
+                        ['label' => 'GMV（近30天）', 'value' => '$'.number_format($gmv, 2)],
+                        ['label' => '订单数', 'value' => number_format($count)],
+                        ['label' => '客单价', 'value' => '$'.number_format($count ? $gmv / $count : 0, 2)],
+                        ['label' => '日均 GMV', 'value' => '$'.number_format($gmv / 30, 2)],
                     ];
                     $result['rows'] = array_slice($orders, 0, 25);
                     $result['trend'] = collect($orders)->groupBy(fn (array $order) => substr((string) ($order['created_at'] ?? ''), 0, 10))->map(fn ($group) => (float) collect($group)->sum(fn (array $order) => (float) ($order['total_price'] ?? 0)))->values()->all();
@@ -511,7 +520,9 @@ class ModuleController extends Controller
         } elseif (str_starts_with($path, '/reputation/')) {
             $reviews = DB::table('ReputationReview')->where('storeId', $this->storeId());
             if (in_array($path, ['/reputation/google-reviews', '/reputation/trustpilot', '/reputation/website-reviews'], true)) {
-                $platform = match ($path) { '/reputation/google-reviews' => 'GOOGLE', '/reputation/trustpilot' => 'TRUSTPILOT', default => 'WEBSITE' };
+                $platform = match ($path) {
+                    '/reputation/google-reviews' => 'GOOGLE', '/reputation/trustpilot' => 'TRUSTPILOT', default => 'WEBSITE'
+                };
                 $reviews->where('platform', $platform);
             }
             $count = (clone $reviews)->count();
@@ -531,29 +542,42 @@ class ModuleController extends Controller
             }
         }
 
-        if ($live && in_array($path, self::EXTERNAL_PATHS, true)) $this->snapshots->put('page:'.$path, $result, $this->storeId());
+        if ($live && in_array($path, self::EXTERNAL_PATHS, true)) {
+            $this->snapshots->put('page:'.$path, $result, $this->storeId());
+        }
+
         return $result;
     }
 
     public function syncExternalPage(string $path): array
     {
         abort_unless(in_array($path, self::EXTERNAL_PATHS, true), 404);
+
         return $this->analytics($path, true);
     }
 
-    public static function externalPaths(): array { return self::EXTERNAL_PATHS; }
+    public static function externalPaths(): array
+    {
+        return self::EXTERNAL_PATHS;
+    }
 
     private function number(mixed $value): float
     {
-        if (is_array($value)) $value = $value[0] ?? 0;
+        if (is_array($value)) {
+            $value = $value[0] ?? 0;
+        }
 
         return (float) preg_replace('/[^0-9.\-]/', '', (string) $value);
     }
 
     private function text(mixed $value): string
     {
-        if (is_array($value)) $value = $value[0] ?? '';
-        if (is_array($value)) $value = $value['text'] ?? $value['name'] ?? $value['value'] ?? '';
+        if (is_array($value)) {
+            $value = $value[0] ?? '';
+        }
+        if (is_array($value)) {
+            $value = $value['text'] ?? $value['name'] ?? $value['value'] ?? '';
+        }
 
         return is_scalar($value) ? (string) $value : '';
     }
@@ -563,7 +587,9 @@ class ModuleController extends Controller
     {
         $appToken = $this->credentials->get($appKey, $this->storeId());
         $tableId = $this->credentials->get($tableKey, $this->storeId());
-        if (! $appToken || ! $tableId) return [];
+        if (! $appToken || ! $tableId) {
+            return [];
+        }
 
         return $this->feishu->bitableRecords($appToken, $tableId, $viewKey ? ($this->credentials->get($viewKey, $this->storeId()) ?? '') : '', $this->storeId());
     }
@@ -598,7 +624,7 @@ class ModuleController extends Controller
                 $advertiser = trim(explode(',', $this->credentials->require('TK_ADVERTISER_IDS', $this->storeId()))[0]);
                 $response = Http::withHeaders(['Access-Token' => $token])->timeout(20)->get('https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/', [
                     'advertiser_id' => $advertiser, 'report_type' => 'BASIC', 'data_level' => 'AUCTION_CAMPAIGN',
-                    'dimensions' => json_encode(['campaign_id','stat_time_day']), 'metrics' => json_encode(['spend','impressions','clicks','conversion','complete_payment','complete_payment_roas']),
+                    'dimensions' => json_encode(['campaign_id', 'stat_time_day']), 'metrics' => json_encode(['spend', 'impressions', 'clicks', 'conversion', 'complete_payment', 'complete_payment_roas']),
                     'start_date' => $since->toDateString(), 'end_date' => $until->toDateString(), 'page' => 1, 'page_size' => 90,
                 ])->throw()->json();
                 if (($response['code'] ?? -1) !== 0) {
@@ -613,11 +639,13 @@ class ModuleController extends Controller
                 $result['rows'] = $daily;
                 $result['trend'] = collect($daily)->map(fn ($row) => (float) ($row['metrics']['spend'] ?? 0))->all();
             } elseif ($path === '/ads/google') {
-                $credentials = $this->credentials->many(['GOOGLE_ADS_CLIENT_ID','GOOGLE_ADS_CLIENT_SECRET','GOOGLE_ADS_REFRESH_TOKEN','GOOGLE_ADS_DEVELOPER_TOKEN','GOOGLE_ADS_CUSTOMER_ID','GOOGLE_ADS_LOGIN_CUSTOMER_ID'], $this->storeId());
+                $credentials = $this->credentials->many(['GOOGLE_ADS_CLIENT_ID', 'GOOGLE_ADS_CLIENT_SECRET', 'GOOGLE_ADS_REFRESH_TOKEN', 'GOOGLE_ADS_DEVELOPER_TOKEN', 'GOOGLE_ADS_CUSTOMER_ID', 'GOOGLE_ADS_LOGIN_CUSTOMER_ID'], $this->storeId());
                 $oauth = Http::asForm()->timeout(15)->post('https://oauth2.googleapis.com/token', ['client_id' => $credentials['GOOGLE_ADS_CLIENT_ID'], 'client_secret' => $credentials['GOOGLE_ADS_CLIENT_SECRET'], 'refresh_token' => $credentials['GOOGLE_ADS_REFRESH_TOKEN'], 'grant_type' => 'refresh_token'])->throw()->json('access_token');
                 $customer = str_replace('-', '', $credentials['GOOGLE_ADS_CUSTOMER_ID']);
                 $headers = ['Authorization' => 'Bearer '.$oauth, 'developer-token' => $credentials['GOOGLE_ADS_DEVELOPER_TOKEN']];
-                if (! empty($credentials['GOOGLE_ADS_LOGIN_CUSTOMER_ID'])) $headers['login-customer-id'] = str_replace('-', '', $credentials['GOOGLE_ADS_LOGIN_CUSTOMER_ID']);
+                if (! empty($credentials['GOOGLE_ADS_LOGIN_CUSTOMER_ID'])) {
+                    $headers['login-customer-id'] = str_replace('-', '', $credentials['GOOGLE_ADS_LOGIN_CUSTOMER_ID']);
+                }
                 $query = "SELECT campaign.id, campaign.name, segments.date, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions, metrics.conversions_value FROM campaign WHERE segments.date BETWEEN '{$since->toDateString()}' AND '{$until->toDateString()}' ORDER BY segments.date ASC";
                 $daily = Http::withHeaders($headers)->timeout(25)->post("https://googleads.googleapis.com/v23/customers/{$customer}/googleAds:search", ['query' => $query])->throw()->json('results', []);
                 $spend = collect($daily)->sum(fn ($row) => (float) ($row['metrics']['costMicros'] ?? 0) / 1000000);
@@ -631,7 +659,7 @@ class ModuleController extends Controller
             } elseif ($path === '/ads/criteo') {
                 $result = $this->criteoAnalytics($since->toDateString(), $until->toDateString());
             } elseif ($path === '/ads/bing-legacy') {
-                $credentials = $this->credentials->many(['BING_ADS_CLIENT_ID','BING_ADS_CLIENT_SECRET','BING_ADS_REFRESH_TOKEN'], $this->storeId());
+                $credentials = $this->credentials->many(['BING_ADS_CLIENT_ID', 'BING_ADS_CLIENT_SECRET', 'BING_ADS_REFRESH_TOKEN'], $this->storeId());
                 Http::asForm()->timeout(15)->post('https://login.microsoftonline.com/common/oauth2/v2.0/token', ['client_id' => $credentials['BING_ADS_CLIENT_ID'], 'client_secret' => $credentials['BING_ADS_CLIENT_SECRET'], 'refresh_token' => $credentials['BING_ADS_REFRESH_TOKEN'], 'grant_type' => 'refresh_token', 'scope' => 'https://ads.microsoft.com/msads.manage offline_access'])->throw();
                 $result['error'] = 'Bing Ads 授权有效；完整报表由 Microsoft 异步生成，当前尚未完成本地报表缓存。';
             } elseif ($path === '/ads/criteo-legacy') {
@@ -639,7 +667,9 @@ class ModuleController extends Controller
                 $result['error'] = 'Criteo 授权有效；当前缺少广告主维度报表缓存。';
             }
         } catch (\Throwable $exception) {
-            $platform = match ($path) { '/ads/facebook' => 'Meta Ads', '/ads/google' => 'Google Ads', '/ads/tiktok' => 'TikTok Ads', '/ads/bing' => 'Bing Ads', default => 'Criteo' };
+            $platform = match ($path) {
+                '/ads/facebook' => 'Meta Ads', '/ads/google' => 'Google Ads', '/ads/tiktok' => 'TikTok Ads', '/ads/bing' => 'Bing Ads', default => 'Criteo'
+            };
             $result['error'] = $platform.' 连接失败：'.(str_contains($exception->getMessage(), '401') ? '访问令牌已失效或权限不足。' : '平台拒绝请求，请更新授权凭证。');
         }
 
@@ -658,11 +688,13 @@ class ModuleController extends Controller
         if (! $advertiserIds) {
             $advertiserIds = collect(Http::withToken($token)->timeout(20)->get('https://api.criteo.com/2025-01/advertisers/me')->throw()->json('data', []))->pluck('id')->map(fn ($id) => (string) $id)->all();
         }
-        if (! $advertiserIds) throw new \RuntimeException('No Criteo advertiser account is available.');
+        if (! $advertiserIds) {
+            throw new \RuntimeException('No Criteo advertiser account is available.');
+        }
         $body = Http::withToken($token)->accept('text/csv')->timeout(30)->post('https://api.criteo.com/2025-01/statistics/report', [
             'advertiserIds' => implode(',', $advertiserIds), 'startDate' => $since,
             'endDate' => $until, 'dimensions' => ['Day'],
-            'metrics' => ['AdvertiserCost','Displays','Clicks','SalesPc7d','SalesPv24h','RevenueGeneratedPc7d','RevenueGeneratedPv24h'],
+            'metrics' => ['AdvertiserCost', 'Displays', 'Clicks', 'SalesPc7d', 'SalesPv24h', 'RevenueGeneratedPc7d', 'RevenueGeneratedPv24h'],
             'currency' => 'USD', 'timezone' => 'UTC', 'format' => 'csv',
         ])->throw()->body();
         $lines = preg_split('/\r?\n/', trim($body));
@@ -670,6 +702,7 @@ class ModuleController extends Controller
         $headers = array_map(fn ($value) => trim($value, " \t\n\r\0\x0B\""), str_getcsv(array_shift($lines) ?: '', $separator));
         $rows = collect($lines)->filter()->map(function ($line) use ($headers, $separator) {
             $values = array_map(fn ($value) => trim($value, " \t\n\r\0\x0B\""), str_getcsv($line, $separator));
+
             return array_combine($headers, array_pad($values, count($headers), '')) ?: [];
         })->values();
         $spend = $rows->sum(fn ($row) => $this->number($row['AdvertiserCost'] ?? 0));
@@ -687,37 +720,64 @@ class ModuleController extends Controller
 
     private function bingAnalytics(string $since, string $until): array
     {
-        $config = $this->credentials->many(['BING_ADS_CLIENT_ID','BING_ADS_CLIENT_SECRET','BING_ADS_REFRESH_TOKEN','BING_ADS_DEVELOPER_TOKEN','BING_ADS_ACCOUNT_ID','BING_ADS_CUSTOMER_ID'], $this->storeId());
+        $config = $this->credentials->many(['BING_ADS_CLIENT_ID', 'BING_ADS_CLIENT_SECRET', 'BING_ADS_REFRESH_TOKEN', 'BING_ADS_DEVELOPER_TOKEN', 'BING_ADS_ACCOUNT_ID', 'BING_ADS_CUSTOMER_ID'], $this->storeId());
         $token = Http::asForm()->timeout(15)->post('https://login.microsoftonline.com/common/oauth2/v2.0/token', ['client_id' => $config['BING_ADS_CLIENT_ID'], 'client_secret' => $config['BING_ADS_CLIENT_SECRET'], 'refresh_token' => $config['BING_ADS_REFRESH_TOKEN'], 'grant_type' => 'refresh_token', 'scope' => 'https://ads.microsoft.com/msads.manage offline_access'])->throw()->json('access_token');
         $headers = ['Authorization' => 'Bearer '.$token, 'DeveloperToken' => $config['BING_ADS_DEVELOPER_TOKEN'], 'CustomerAccountId' => (string) $config['BING_ADS_ACCOUNT_ID'], 'Accept' => 'application/json'];
-        if (! empty($config['BING_ADS_CUSTOMER_ID'])) $headers['CustomerId'] = (string) $config['BING_ADS_CUSTOMER_ID'];
+        if (! empty($config['BING_ADS_CUSTOMER_ID'])) {
+            $headers['CustomerId'] = (string) $config['BING_ADS_CUSTOMER_ID'];
+        }
         $date = fn (string $value) => ['Day' => (int) substr($value, 8, 2), 'Month' => (int) substr($value, 5, 2), 'Year' => (int) substr($value, 0, 4)];
-        $request = ['Type' => 'AccountPerformanceReportRequest', 'ExcludeColumnHeaders' => false, 'ExcludeReportFooter' => true, 'ExcludeReportHeader' => true, 'Format' => 'Csv', 'FormatVersion' => '2.0', 'ReportName' => 'LaravelBingDailyPerf', 'ReturnOnlyCompleteData' => false, 'Aggregation' => 'Daily', 'Columns' => ['TimePeriod','AccountId','Spend','Impressions','Clicks','Ctr','AverageCpc','Conversions','Revenue'], 'Scope' => ['AccountIds' => [(int) $config['BING_ADS_ACCOUNT_ID']]], 'Time' => ['CustomDateRangeStart' => $date($since), 'CustomDateRangeEnd' => $date($until)]];
+        $request = ['Type' => 'AccountPerformanceReportRequest', 'ExcludeColumnHeaders' => false, 'ExcludeReportFooter' => true, 'ExcludeReportHeader' => true, 'Format' => 'Csv', 'FormatVersion' => '2.0', 'ReportName' => 'LaravelBingDailyPerf', 'ReturnOnlyCompleteData' => false, 'Aggregation' => 'Daily', 'Columns' => ['TimePeriod', 'AccountId', 'Spend', 'Impressions', 'Clicks', 'Ctr', 'AverageCpc', 'Conversions', 'Revenue'], 'Scope' => ['AccountIds' => [(int) $config['BING_ADS_ACCOUNT_ID']]], 'Time' => ['CustomDateRangeStart' => $date($since), 'CustomDateRangeEnd' => $date($until)]];
         $submit = Http::withHeaders($headers)->asJson()->timeout(20)->post('https://reporting.api.bingads.microsoft.com/Reporting/v13/GenerateReport/Submit', ['ReportRequest' => $request])->throw()->json();
         $reportId = $submit['ReportRequestId'] ?? null;
-        if (! $reportId) throw new \RuntimeException('Bing report submission did not return a report id.');
+        if (! $reportId) {
+            throw new \RuntimeException('Bing report submission did not return a report id.');
+        }
         $downloadUrl = null;
         for ($attempt = 0; $attempt < 30; $attempt++) {
             usleep(1000000);
             $status = Http::withHeaders($headers)->asJson()->timeout(15)->post('https://reporting.api.bingads.microsoft.com/Reporting/v13/GenerateReport/Poll', ['ReportRequestId' => $reportId]);
-            if (! $status->successful()) continue;
-            if ($status->json('ReportRequestStatus.Status') === 'Error') throw new \RuntimeException('Bing report generation failed.');
-            if ($status->json('ReportRequestStatus.Status') === 'Success') { $downloadUrl = $status->json('ReportRequestStatus.ReportDownloadUrl'); break; }
+            if (! $status->successful()) {
+                continue;
+            }
+            if ($status->json('ReportRequestStatus.Status') === 'Error') {
+                throw new \RuntimeException('Bing report generation failed.');
+            }
+            if ($status->json('ReportRequestStatus.Status') === 'Success') {
+                $downloadUrl = $status->json('ReportRequestStatus.ReportDownloadUrl');
+                break;
+            }
         }
-        if (! $downloadUrl) throw new \RuntimeException('Bing report generation timed out.');
+        if (! $downloadUrl) {
+            throw new \RuntimeException('Bing report generation timed out.');
+        }
         $download = Http::timeout(30)->get($downloadUrl)->throw();
         $csv = $download->body();
         if (str_contains(strtolower($download->header('Content-Type')), 'zip') || str_contains(strtolower($downloadUrl), '.zip')) {
-            $temporary = tempnam(sys_get_temp_dir(), 'bing-report-'); file_put_contents($temporary, $csv); $zip = new \ZipArchive();
-            if ($zip->open($temporary) !== true || $zip->numFiles < 1) { @unlink($temporary); throw new \RuntimeException('Bing returned an empty report archive.'); }
-            $csv = (string) $zip->getFromIndex(0); $zip->close(); @unlink($temporary);
+            $temporary = tempnam(sys_get_temp_dir(), 'bing-report-');
+            file_put_contents($temporary, $csv);
+            $zip = new \ZipArchive;
+            if ($zip->open($temporary) !== true || $zip->numFiles < 1) {
+                @unlink($temporary);
+                throw new \RuntimeException('Bing returned an empty report archive.');
+            }
+            $csv = (string) $zip->getFromIndex(0);
+            $zip->close();
+            @unlink($temporary);
         }
         $lines = array_values(array_filter(preg_split('/\r?\n/', $csv), fn ($line) => trim($line) !== ''));
         $headerIndex = collect($lines)->search(fn ($line) => str_contains($line, 'Spend') && str_contains($line, 'Impressions'));
-        if ($headerIndex === false) $headerIndex = 0;
+        if ($headerIndex === false) {
+            $headerIndex = 0;
+        }
         $headersCsv = str_getcsv($lines[$headerIndex] ?? '');
         $rows = collect(array_slice($lines, $headerIndex + 1))->map(fn ($line) => array_combine($headersCsv, array_pad(str_getcsv($line), count($headersCsv), '')) ?: [])->values();
-        $spend = $rows->sum(fn ($row) => $this->number($row['Spend'] ?? 0)); $revenue = $rows->sum(fn ($row) => $this->number($row['Revenue'] ?? 0)); $conversions = $rows->sum(fn ($row) => $this->number($row['Conversions'] ?? 0)); $clicks = $rows->sum(fn ($row) => $this->number($row['Clicks'] ?? 0)); $impressions = $rows->sum(fn ($row) => $this->number($row['Impressions'] ?? 0));
+        $spend = $rows->sum(fn ($row) => $this->number($row['Spend'] ?? 0));
+        $revenue = $rows->sum(fn ($row) => $this->number($row['Revenue'] ?? 0));
+        $conversions = $rows->sum(fn ($row) => $this->number($row['Conversions'] ?? 0));
+        $clicks = $rows->sum(fn ($row) => $this->number($row['Clicks'] ?? 0));
+        $impressions = $rows->sum(fn ($row) => $this->number($row['Impressions'] ?? 0));
+
         return ['metrics' => [['label' => '广告花费', 'value' => '$'.number_format($spend, 2)], ['label' => '收入', 'value' => '$'.number_format($revenue, 2)], ['label' => 'ROAS', 'value' => number_format($spend ? $revenue / $spend : 0, 2).'×'], ['label' => '转化', 'value' => number_format($conversions)], ['label' => '点击', 'value' => number_format($clicks)], ['label' => '展示', 'value' => number_format($impressions)]], 'rows' => $rows->all(), 'trend' => $rows->map(fn ($row) => $this->number($row['Spend'] ?? 0))->all()];
     }
 

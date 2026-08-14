@@ -20,6 +20,6 @@ class TeamController extends Controller
             return $member;
         });
 
-        return Inertia::render('Team',['members' => $members]);
+        return Inertia::render('Team', ['members' => $members]);
     }
 }

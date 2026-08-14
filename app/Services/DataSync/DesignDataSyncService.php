@@ -42,7 +42,9 @@ class DesignDataSyncService
     public function rows(string $storeId = 'default-store'): array
     {
         $payload = DB::table('ExternalDataSnapshot')->where('key', $this->key($storeId))->value('payload');
-        if (! $payload) return [];
+        if (! $payload) {
+            return [];
+        }
 
         return json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
     }

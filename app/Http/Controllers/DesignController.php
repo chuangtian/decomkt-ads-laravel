@@ -6,7 +6,6 @@ use App\Services\DataSync\DesignDataSyncService;
 use App\Services\Stores\StoreContext;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -43,7 +42,9 @@ class DesignController extends Controller
             'types' => fn () => $getRows()->groupBy('type')->map(fn ($items, $name) => ['name' => $name ?: '其他', 'count' => $items->count()])->sortByDesc('count')->values(),
             'activeTasks' => fn () => $getRows()->filter(fn ($row) => str_contains($row['status'], '进行中'))->take(12)->values(),
             'recordPage' => function () use ($getRows, $request) {
-                if ($request->query('detail') !== 'records') return null;
+                if ($request->query('detail') !== 'records') {
+                    return null;
+                }
                 $search = mb_strtolower(trim((string) $request->query('search', '')));
                 $items = $getRows()->filter(fn ($row) => $search === '' || str_contains(mb_strtolower(implode(' ', array_map(fn ($value) => is_scalar($value) ? (string) $value : '', $row))), $search))->values();
                 $page = max(1, $request->integer('page', 1));
@@ -84,15 +85,25 @@ class DesignController extends Controller
 
     private function text(mixed $value): string
     {
-        if (is_array($value) && array_is_list($value)) return trim(collect($value)->map(fn ($item) => $this->text($item))->filter()->join(''));
-        if (is_array($value)) return (string) ($value['name'] ?? $value['text'] ?? $value['value'] ?? '');
+        if (is_array($value) && array_is_list($value)) {
+            return trim(collect($value)->map(fn ($item) => $this->text($item))->filter()->join(''));
+        }
+        if (is_array($value)) {
+            return (string) ($value['name'] ?? $value['text'] ?? $value['value'] ?? '');
+        }
+
         return trim((string) ($value ?? ''));
     }
 
     private function date(mixed $value): ?string
     {
-        if (! $value) return null;
-        if (is_numeric($value)) return Carbon::createFromTimestampMs((int) $value, 'Asia/Shanghai')->format('Y-m-d');
+        if (! $value) {
+            return null;
+        }
+        if (is_numeric($value)) {
+            return Carbon::createFromTimestampMs((int) $value, 'Asia/Shanghai')->format('Y-m-d');
+        }
+
         return substr((string) $value, 0, 10);
     }
 }

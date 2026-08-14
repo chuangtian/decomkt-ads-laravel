@@ -21,6 +21,7 @@ class TaskController extends Controller
         });
 
         $employees = DB::table('Employee')->join('StoreMember', 'StoreMember.employeeId', '=', 'Employee.id')->where('StoreMember.storeId', $storeContext->id())->where('Employee.status', 'ACTIVE')->orderBy('Employee.name')->get(['Employee.id', 'Employee.name']);
+
         return Inertia::render('Kanban', ['tasks' => $tasks, 'employees' => $employees]);
     }
 
@@ -62,6 +63,6 @@ class TaskController extends Controller
             DB::table('Task')->where('id', $task)->delete();
         });
 
-        return back()->with('success','任务已删除');
+        return back()->with('success', '任务已删除');
     }
 }

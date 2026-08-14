@@ -50,10 +50,16 @@ class SeoSnapshotService
         $errors = [];
         $gsc = $ga4 = null;
 
-        try { $gsc = $this->gsc->overview($startDate, $endDate, $storeId); }
-        catch (\Throwable $exception) { $errors['gsc'] = $exception->getMessage(); }
-        try { $ga4 = $this->ga4->overview($startDate, $endDate, $storeId); }
-        catch (\Throwable $exception) { $errors['ga4'] = $exception->getMessage(); }
+        try {
+            $gsc = $this->gsc->overview($startDate, $endDate, $storeId);
+        } catch (\Throwable $exception) {
+            $errors['gsc'] = $exception->getMessage();
+        }
+        try {
+            $ga4 = $this->ga4->overview($startDate, $endDate, $storeId);
+        } catch (\Throwable $exception) {
+            $errors['ga4'] = $exception->getMessage();
+        }
 
         $payload = [
             'range' => ['startDate' => $startDate, 'endDate' => $endDate],
@@ -78,7 +84,9 @@ class SeoSnapshotService
 
         foreach ($records as $row) {
             $date = $this->date($row['日期'] ?? null);
-            if (! $date || ! str_starts_with($date, $month)) continue;
+            if (! $date || ! str_starts_with($date, $month)) {
+                continue;
+            }
             $dataThrough = max($dataThrough ?? $date, $date);
             $actual['seo_gmv'] += $this->number($row['SEOGMV'] ?? 0);
             $actual['industry_clicks'] += $this->number($row['点击-行业词'] ?? 0);
@@ -99,9 +107,13 @@ class SeoSnapshotService
         ] as $metric => [$tokenKey, $sheetKey]) {
             $token = $this->credentials->get($tokenKey, $storeId);
             $sheet = $this->credentials->get($sheetKey, $storeId);
-            if (! $token || ! $sheet) continue;
-            try { $actual[$metric] = max($actual[$metric], $this->countSheet($this->feishu->spreadsheetValues($token, $sheet, $storeId), $metric, $month)); }
-            catch (\Throwable) { /* Keep the last persisted count when a work sheet is temporarily unavailable. */ }
+            if (! $token || ! $sheet) {
+                continue;
+            }
+            try {
+                $actual[$metric] = max($actual[$metric], $this->countSheet($this->feishu->spreadsheetValues($token, $sheet, $storeId), $metric, $month));
+            } catch (\Throwable) { /* Keep the last persisted count when a work sheet is temporarily unavailable. */
+            }
         }
 
         [$year, $monthNumber] = array_map('intval', explode('-', $month));
@@ -129,15 +141,25 @@ class SeoSnapshotService
 
     private function number(mixed $value): float
     {
-        if (is_array($value)) $value = $value[0] ?? 0;
+        if (is_array($value)) {
+            $value = $value[0] ?? 0;
+        }
+
         return (float) preg_replace('/[^0-9.\-]/', '', (string) $value);
     }
 
     private function date(mixed $value): ?string
     {
-        if (is_array($value)) $value = $value[0] ?? null;
-        if (is_numeric($value)) return CarbonImmutable::createFromTimestampMs((int) $value, 'Asia/Shanghai')->toDateString();
-        if (is_string($value) && preg_match('/\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/', $value, $match)) return str_replace('/', '-', $match[0]);
+        if (is_array($value)) {
+            $value = $value[0] ?? null;
+        }
+        if (is_numeric($value)) {
+            return CarbonImmutable::createFromTimestampMs((int) $value, 'Asia/Shanghai')->toDateString();
+        }
+        if (is_string($value) && preg_match('/\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/', $value, $match)) {
+            return str_replace('/', '-', $match[0]);
+        }
+
         return null;
     }
 
@@ -151,7 +173,9 @@ class SeoSnapshotService
             default => [['本月计入'], ['流程名称']],
         };
         $columns = array_map(fn (array $names) => $this->findColumn($rows, $names), $headers);
-        if (($columns[0][1] ?? -1) < 0) return 0;
+        if (($columns[0][1] ?? -1) < 0) {
+            return 0;
+        }
         $start = max(array_column($columns, 0)) + 1;
         $seen = [];
         $count = 0;
@@ -160,19 +184,31 @@ class SeoSnapshotService
             $row = $rows[$index] ?? [];
             $primary = $row[$columns[0][1]] ?? null;
             if ($metric === 'ai_automation') {
-                if (trim($this->cellText($primary)) !== '计入') continue;
+                if (trim($this->cellText($primary)) !== '计入') {
+                    continue;
+                }
                 $name = trim($this->cellText($row[$columns[1][1]] ?? ''));
-                if ($name !== '') $seen[$name] = true;
+                if ($name !== '') {
+                    $seen[$name] = true;
+                }
+
                 continue;
             }
             if ($metric === 'backlinks') {
                 $text = $this->cellText($primary);
                 $matches = $this->monthValue($primary) === $month || (int) preg_replace('/\D/', '', $text) === (int) substr($month, 5, 2);
-                if ($matches) $count++;
+                if ($matches) {
+                    $count++;
+                }
+
                 continue;
             }
-            if ($this->monthValue($primary) !== $month) continue;
-            if (($columns[1][1] ?? -1) >= 0 && trim($this->cellText($row[$columns[1][1]] ?? '')) === '') continue;
+            if ($this->monthValue($primary) !== $month) {
+                continue;
+            }
+            if (($columns[1][1] ?? -1) >= 0 && trim($this->cellText($row[$columns[1][1]] ?? '')) === '') {
+                continue;
+            }
             $count++;
         }
 
@@ -185,15 +221,21 @@ class SeoSnapshotService
         for ($row = 0; $row < min(5, count($rows)); $row++) {
             foreach ($rows[$row] ?? [] as $column => $value) {
                 $text = trim($this->cellText($value));
-                if (collect($names)->contains(fn (string $name) => $text === $name || str_contains($text, $name))) return [$row, $column];
+                if (collect($names)->contains(fn (string $name) => $text === $name || str_contains($text, $name))) {
+                    return [$row, $column];
+                }
             }
         }
+
         return [0, -1];
     }
 
     private function cellText(mixed $value): string
     {
-        if (is_array($value)) return collect($value)->map(fn ($item) => is_array($item) ? ($item['text'] ?? '') : $item)->join('');
+        if (is_array($value)) {
+            return collect($value)->map(fn ($item) => is_array($item) ? ($item['text'] ?? '') : $item)->join('');
+        }
+
         return is_scalar($value) ? (string) $value : '';
     }
 
@@ -201,10 +243,17 @@ class SeoSnapshotService
     {
         if (is_numeric($value)) {
             $number = (float) $value;
-            if ($number > 100000000000) return CarbonImmutable::createFromTimestampMs((int) $number)->format('Y-m');
-            if ($number > 40000 && $number < 80000) return CarbonImmutable::create(1899, 12, 30)->addDays((int) $number)->format('Y-m');
+            if ($number > 100000000000) {
+                return CarbonImmutable::createFromTimestampMs((int) $number)->format('Y-m');
+            }
+            if ($number > 40000 && $number < 80000) {
+                return CarbonImmutable::create(1899, 12, 30)->addDays((int) $number)->format('Y-m');
+            }
         }
-        if (preg_match('/(\d{4})[-\/](\d{1,2})/', $this->cellText($value), $match)) return $match[1].'-'.str_pad($match[2], 2, '0', STR_PAD_LEFT);
+        if (preg_match('/(\d{4})[-\/](\d{1,2})/', $this->cellText($value), $match)) {
+            return $match[1].'-'.str_pad($match[2], 2, '0', STR_PAD_LEFT);
+        }
+
         return null;
     }
 }

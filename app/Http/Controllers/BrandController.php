@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Services\Credentials\CredentialService;
-use App\Services\Integrations\FeishuConnector;
 use App\Services\DataSync\ExternalSnapshotService;
+use App\Services\Integrations\FeishuConnector;
 use App\Services\Stores\StoreContext;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -34,22 +34,28 @@ class BrandController extends Controller
         $storeId = $this->storeContext->id();
         $spreadsheet = $this->credentials->require('FEISHU_BRAND_SPREADSHEET_TOKEN', $storeId);
         $sheets = array_map(function (array $config) use ($spreadsheet, $storeId): array {
-                $path = '/sheets/v2/spreadsheets/'.$spreadsheet.'/values/'.$config['id'].'!A1:H200?valueRenderOption=ToString';
-                $values = $this->feishu->get($path, $storeId)['data']['valueRange']['values'] ?? [];
-                $matrix = array_values(array_filter(array_map(fn (array $row) => array_map(fn ($cell) => is_scalar($cell) ? trim((string) $cell) : '', $row), $values), fn (array $row) => collect($row)->contains(fn ($cell) => $cell !== '')));
-                if ($matrix === []) return ['key' => $config['key'], 'title' => $config['title'], 'headers' => [], 'rows' => [], 'secretCols' => []];
-                $columnCount = max(array_map(function (array $row): int {
-                    for ($index = count($row) - 1; $index >= 0; $index--) {
-                        if ($row[$index] !== '') return $index + 1;
+            $path = '/sheets/v2/spreadsheets/'.$spreadsheet.'/values/'.$config['id'].'!A1:H200?valueRenderOption=ToString';
+            $values = $this->feishu->get($path, $storeId)['data']['valueRange']['values'] ?? [];
+            $matrix = array_values(array_filter(array_map(fn (array $row) => array_map(fn ($cell) => is_scalar($cell) ? trim((string) $cell) : '', $row), $values), fn (array $row) => collect($row)->contains(fn ($cell) => $cell !== '')));
+            if ($matrix === []) {
+                return ['key' => $config['key'], 'title' => $config['title'], 'headers' => [], 'rows' => [], 'secretCols' => []];
+            }
+            $columnCount = max(array_map(function (array $row): int {
+                for ($index = count($row) - 1; $index >= 0; $index--) {
+                    if ($row[$index] !== '') {
+                        return $index + 1;
                     }
-                    return 0;
-                }, $matrix));
-                $headers = array_pad(array_slice($matrix[0], 0, $columnCount), $columnCount, '');
-                $rows = array_map(fn (array $row) => array_pad(array_slice($row, 0, $columnCount), $columnCount, ''), array_slice($matrix, 1));
+                }
 
-                return ['key' => $config['key'], 'title' => $config['title'], 'headers' => $headers, 'rows' => $rows, 'secretCols' => array_values(array_filter(array_map(fn ($name) => array_search($name, $headers, true), $config['secrets']), fn ($index) => $index !== false))];
-            }, self::SHEETS);
+                return 0;
+            }, $matrix));
+            $headers = array_pad(array_slice($matrix[0], 0, $columnCount), $columnCount, '');
+            $rows = array_map(fn (array $row) => array_pad(array_slice($row, 0, $columnCount), $columnCount, ''), array_slice($matrix, 1));
+
+            return ['key' => $config['key'], 'title' => $config['title'], 'headers' => $headers, 'rows' => $rows, 'secretCols' => array_values(array_filter(array_map(fn ($name) => array_search($name, $headers, true), $config['secrets']), fn ($index) => $index !== false))];
+        }, self::SHEETS);
         $this->snapshots->put('page:/workspace/brand', $sheets, $storeId);
+
         return $sheets;
     }
 }

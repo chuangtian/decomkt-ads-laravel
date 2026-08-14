@@ -27,6 +27,7 @@ class ImportLegacyCsvBundleCommand extends Command
                 $table = pathinfo($file, PATHINFO_FILENAME);
                 if (! Schema::hasTable($table)) {
                     $this->warn("Skipped missing table: {$table}");
+
                     continue;
                 }
 
@@ -38,6 +39,7 @@ class ImportLegacyCsvBundleCommand extends Command
                 $headers = fgetcsv($handle, escape: '');
                 if (! is_array($headers)) {
                     fclose($handle);
+
                     continue;
                 }
 

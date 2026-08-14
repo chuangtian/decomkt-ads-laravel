@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\ConfigurationController;
 use App\Http\Controllers\BrandController;
+use App\Http\Controllers\ConfigurationController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DesignDataController;
 use App\Http\Controllers\DesignController;
+use App\Http\Controllers\DesignDataController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ExternalDataController;
 use App\Http\Controllers\LegacyApiController;
@@ -67,18 +67,20 @@ Route::middleware(['auth', 'verified', 'page.access'])->group(function () {
         ->where(['storeSlug' => '(?!(?:account|api|collab|configuration|dashboard|data-sync|ecommerce|employees|home|organic|permissions|profile|reputation|roles|settings|stores|student-discounts|tasks|workspace)$)[A-Za-z0-9_-]+'])
         ->name('store.')
         ->group(function () {
-        Route::get('/', DashboardController::class)->name('dashboard');
-        Route::get('/collab/kanban', [TaskController::class, 'index'])->name('tasks.index');
-        Route::get('/collab/team', TeamController::class)->name('team.index');
-        Route::get('/organic/seo', [SeoController::class, 'index'])->name('organic.seo');
-        Route::get('/workspace/brand', BrandController::class)->name('workspace.brand');
-        Route::get('/ecommerce/design', DesignController::class)->name('ecommerce.design');
+            Route::get('/', DashboardController::class)->name('dashboard');
+            Route::get('/collab/kanban', [TaskController::class, 'index'])->name('tasks.index');
+            Route::get('/collab/team', TeamController::class)->name('team.index');
+            Route::get('/organic/seo', [SeoController::class, 'index'])->name('organic.seo');
+            Route::get('/workspace/brand', BrandController::class)->name('workspace.brand');
+            Route::get('/ecommerce/design', DesignController::class)->name('ecommerce.design');
 
-        $special = ['/collab/kanban', '/collab/team', '/organic/seo', '/workspace/brand', '/ecommerce/design', '/employees', '/roles', '/stores', '/settings'];
-        foreach (config('decomkt.pages') as $page) {
-            if (in_array($page['path'], $special, true)) continue;
-            Route::get($page['path'], ModuleController::class)->name('module.'.trim(str_replace('/', '.', $page['path']), '.'));
-        }
+            $special = ['/collab/kanban', '/collab/team', '/organic/seo', '/workspace/brand', '/ecommerce/design', '/employees', '/roles', '/stores', '/settings'];
+            foreach (config('decomkt.pages') as $page) {
+                if (in_array($page['path'], $special, true)) {
+                    continue;
+                }
+                Route::get($page['path'], ModuleController::class)->name('module.'.trim(str_replace('/', '.', $page['path']), '.'));
+            }
         });
 
     $managedPaths = ['/employees', '/roles', '/stores', '/collab/kanban', '/collab/team', '/organic/seo', '/workspace/brand', '/ecommerce/design'];

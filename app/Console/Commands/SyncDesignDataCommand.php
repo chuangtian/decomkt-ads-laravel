@@ -18,7 +18,9 @@ class SyncDesignDataCommand extends Command
     {
         $failed = false;
         foreach (DB::table('Store')->where('status', 'ACTIVE')->pluck('id') as $storeId) {
-            if (! $storeContext->isEnabled('/ecommerce/design', $storeId)) continue;
+            if (! $storeContext->isEnabled('/ecommerce/design', $storeId)) {
+                continue;
+            }
             try {
                 $records = $sync->sync($storeId);
                 $this->info("{$storeId}: design synchronized (".count($records).' records).');

@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\Schema;
 class StoreContext
 {
     private ?object $employee = null;
+
     private ?Collection $stores = null;
+
     private ?object $store = null;
 
     public function __construct(private readonly Request $request) {}
@@ -83,7 +85,9 @@ class StoreContext
     public function membership(?string $storeId = null): ?object
     {
         $employee = $this->employee();
-        if (! $employee) return null;
+        if (! $employee) {
+            return null;
+        }
 
         return DB::table('StoreMember')->where('storeId', $storeId ?? $this->id())->where('employeeId', $employee->id)->first();
     }
@@ -145,7 +149,10 @@ class StoreContext
     public function url(string $logicalPath = '/'): string
     {
         $slug = $this->store()?->slug;
-        if (! $slug) return '/account/profile';
+        if (! $slug) {
+            return '/account/profile';
+        }
+
         return '/'.$slug.($logicalPath === '/' ? '' : '/'.ltrim($logicalPath, '/'));
     }
 
