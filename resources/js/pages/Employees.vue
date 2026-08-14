@@ -10,6 +10,7 @@ type Employee = {
     jobTitle?: string;
     status: string;
     isDefaultAdmin: boolean;
+    hasGlobalAccess: boolean;
     roles: string[];
     roleIds: string[];
     stores: string[];
@@ -210,8 +211,25 @@ const remove = (employee: Employee) => {
                                     }}</span
                                 >
                             </td>
-                            <td>{{ employee.roles.join('、') || '未分配' }}</td>
-                            <td>{{ employee.stores.join('、') || '—' }}</td>
+                            <td>
+                                <span
+                                    v-if="employee.hasGlobalAccess"
+                                    class="deco-pill blue"
+                                >
+                                    超级管理员 · 全部权限
+                                </span>
+                                <template v-else>
+                                    {{ employee.roles.join('、') || '未分配' }}
+                                </template>
+                            </td>
+                            <td>
+                                <span v-if="employee.hasGlobalAccess">
+                                    全部店铺（{{ employee.storeIds.length }}）
+                                </span>
+                                <template v-else>
+                                    {{ employee.stores.join('、') || '—' }}
+                                </template>
+                            </td>
                             <td>
                                 <div class="flex flex-wrap gap-2">
                                     <button
@@ -354,7 +372,18 @@ const remove = (employee: Employee) => {
                         <option value="ACTIVE">启用</option>
                         <option value="DISABLED">停用</option>
                     </select>
-                    <fieldset>
+                    <div
+                        v-if="editing.hasGlobalAccess"
+                        class="rounded border border-blue-500/30 bg-blue-500/10 p-4"
+                    >
+                        <p class="font-bold text-blue-300">
+                            超级管理员 · 全部权限
+                        </p>
+                        <p class="mt-1 text-sm text-[#aeb7c2]">
+                            自动拥有所有当前及未来新增店铺、全部业务页面和系统管理权限，无需单独勾选。
+                        </p>
+                    </div>
+                    <fieldset v-if="!editing.hasGlobalAccess">
                         <legend class="mb-2 text-sm font-bold">角色</legend>
                         <div class="grid grid-cols-2 gap-2">
                             <label
@@ -370,7 +399,7 @@ const remove = (employee: Employee) => {
                             >
                         </div>
                     </fieldset>
-                    <fieldset>
+                    <fieldset v-if="!editing.hasGlobalAccess">
                         <legend class="mb-2 text-sm font-bold">
                             可访问店铺
                         </legend>
