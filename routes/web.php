@@ -1,35 +1,58 @@
 <?php
 
 use App\Http\Controllers\ConfigurationController;
+use App\Http\Controllers\BrandController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DesignDataController;
+use App\Http\Controllers\DesignController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\ExternalDataController;
 use App\Http\Controllers\LegacyApiController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ReputationController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SeoController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\StudentDiscountController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
+use App\Services\Stores\StoreContext;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/api/public/student-discounts', [LegacyApiController::class, 'publicStudentDiscount']);
 
 Route::middleware(['auth', 'verified', 'page.access'])->group(function () {
-    Route::get('/', DashboardController::class)->name('dashboard');
+    Route::get('/', fn (StoreContext $storeContext) => redirect($storeContext->url()))->name('dashboard');
     Route::redirect('/home', '/')->name('home');
-    Route::get('/dashboard', DashboardController::class);
+    Route::get('/dashboard', fn (StoreContext $storeContext) => redirect($storeContext->url()));
     Route::redirect('/profile', '/account/profile');
 
     Route::resource('employees', EmployeeController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::put('/employees/{employee}/password', [EmployeeController::class, 'resetPassword'])->name('employees.password');
     Route::resource('roles', RoleController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('stores', StoreController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::post('/stores/switch', [StoreController::class, 'switch'])->name('stores.switch');
     Route::put('/stores/{store}/members', [StoreController::class, 'syncMembers'])->name('stores.members');
+    Route::put('/stores/{store}/modules', [StoreController::class, 'syncModules'])->name('stores.modules');
+    Route::get('/stores/{legacyStoreSlug}/{legacyPath?}', function (string $legacyStoreSlug, ?string $legacyPath, StoreContext $storeContext) {
+        $storeContext->switchToSlug($legacyStoreSlug);
+        $logicalPath = $legacyPath ? '/'.ltrim($legacyPath, '/') : '/';
+
+        abort_unless($logicalPath === '/' || in_array($logicalPath, StoreContext::allStorePaths(), true), 404);
+
+        return redirect($storeContext->url($logicalPath), 301);
+    })->where('legacyPath', '.*')->name('stores.legacy');
     Route::resource('tasks', TaskController::class)->only(['store', 'update', 'destroy']);
     Route::get('/collab/kanban', [TaskController::class, 'index'])->name('tasks.index');
     Route::get('/collab/team', TeamController::class)->name('team.index');
+    Route::get('/organic/seo', [SeoController::class, 'index'])->name('organic.seo');
+    Route::post('/organic/seo/refresh', [SeoController::class, 'refresh'])->name('organic.seo.refresh');
+    Route::get('/workspace/brand', BrandController::class)->name('workspace.brand');
+    Route::post('/ecommerce/design/refresh', [DesignDataController::class, 'refresh'])->name('ecommerce.design.refresh');
+    Route::post('/data-sync/refresh', [ExternalDataController::class, 'refresh'])->name('data-sync.refresh');
+    Route::get('/ecommerce/design', DesignController::class)->name('ecommerce.design');
+    Route::get('/api/organic/seo-overview', [SeoController::class, 'overview'])->name('organic.seo.overview');
     Route::resource('permissions', PermissionController::class)->only(['index', 'store', 'destroy']);
     Route::post('/configuration/{scope}', [ConfigurationController::class, 'store'])->name('configuration.store');
     Route::delete('/configuration/{scope}/{key}', [ConfigurationController::class, 'destroy'])->name('configuration.destroy');
@@ -40,7 +63,25 @@ Route::middleware(['auth', 'verified', 'page.access'])->group(function () {
     Route::post('/reputation/analyze', [ReputationController::class, 'analyze'])->name('reputation.analyze');
     Route::post('/reputation/weekly-report', [ReputationController::class, 'saveWeeklyReport'])->name('reputation.weekly-report.store');
 
-    $managedPaths = ['/employees', '/roles', '/stores', '/collab/kanban', '/collab/team'];
+    Route::prefix('/{storeSlug}')
+        ->where(['storeSlug' => '(?!(?:account|api|collab|configuration|dashboard|data-sync|ecommerce|employees|home|organic|permissions|profile|reputation|roles|settings|stores|student-discounts|tasks|workspace)$)[A-Za-z0-9_-]+'])
+        ->name('store.')
+        ->group(function () {
+        Route::get('/', DashboardController::class)->name('dashboard');
+        Route::get('/collab/kanban', [TaskController::class, 'index'])->name('tasks.index');
+        Route::get('/collab/team', TeamController::class)->name('team.index');
+        Route::get('/organic/seo', [SeoController::class, 'index'])->name('organic.seo');
+        Route::get('/workspace/brand', BrandController::class)->name('workspace.brand');
+        Route::get('/ecommerce/design', DesignController::class)->name('ecommerce.design');
+
+        $special = ['/collab/kanban', '/collab/team', '/organic/seo', '/workspace/brand', '/ecommerce/design', '/employees', '/roles', '/stores', '/settings'];
+        foreach (config('decomkt.pages') as $page) {
+            if (in_array($page['path'], $special, true)) continue;
+            Route::get($page['path'], ModuleController::class)->name('module.'.trim(str_replace('/', '.', $page['path']), '.'));
+        }
+        });
+
+    $managedPaths = ['/employees', '/roles', '/stores', '/collab/kanban', '/collab/team', '/organic/seo', '/workspace/brand', '/ecommerce/design'];
     foreach (config('decomkt.pages') as $page) {
         if (in_array($page['path'], $managedPaths, true)) {
             continue;

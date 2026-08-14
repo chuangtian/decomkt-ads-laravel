@@ -808,9 +808,9 @@ return new class extends Migration
             $table->string('startDate');
             $table->string('endDate');
             $table->text('filters');
-            $table->text('rows');
-            $table->text('totals');
-            $table->text('trendData');
+            $table->longText('rows');
+            $table->longText('totals');
+            $table->longText('trendData');
             $table->integer('rowCount')->default(0);
             $table->dateTime('createdAt')->useCurrent();
             $table->dateTime('updatedAt')->useCurrent()->useCurrentOnUpdate();

@@ -40,8 +40,8 @@ export default defineConfig({
                 },
             },
         }),
-        wayfinder({
+        ...(process.env.SKIP_WAYFINDER ? [] : [wayfinder({
             formVariants: true,
-        }),
+        })]),
     ],
 });

@@ -41,7 +41,7 @@ expression = `$table->dateTime('${name}')`;
 } else if (type === 'Bytes') {
  expression = `$table->binary('${name}')`; supportsDefault = false;
 } else if (type === 'String' && /@db\.Text\b/.test(attributes)) {
- expression = `$table->text('${name}')`; supportsDefault = false;
+ expression = `$table->longText('${name}')`; supportsDefault = false;
 } else if (type === 'String' && /@db\.LongText\b/.test(attributes)) {
  expression = `$table->longText('${name}')`; supportsDefault = false;
 } else {

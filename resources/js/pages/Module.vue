@@ -1,7 +1,18 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { pageBlueprints } from '@/data/pageBlueprints';
+
+// Module is shared by most business routes. Load only the component needed by
+// the current route so the first sidebar visit does not download every module.
+const DesignView = defineAsyncComponent(() => import('@/pages/Design.vue'));
+const AffiliateView = defineAsyncComponent(() => import('@/pages/Affiliate.vue'));
+const EdmView = defineAsyncComponent(() => import('@/pages/Edm.vue'));
+const ReputationView = defineAsyncComponent(() => import('@/pages/Reputation.vue'));
+const ReputationOverview = defineAsyncComponent(() => import('@/pages/ReputationOverview.vue'));
+const SocialView = defineAsyncComponent(() => import('@/pages/Social.vue'));
+const KolView = defineAsyncComponent(() => import('@/pages/Kol.vue'));
+const AdsPlatformView = defineAsyncComponent(() => import('@/pages/AdsPlatform.vue'));
 
 const props = defineProps<{
     module: { group: string; title: string; path: string; description: string; features: string[] };
@@ -9,6 +20,19 @@ const props = defineProps<{
     configuration?: Record<string, boolean>;
     studentDiscount?: { enabled: boolean; issued: number; failed: number; total: number } | null;
     records?: any;
+    configuredCredentials?: string[];
+    analytics?: { metrics: Array<{ label: string; value: string; detail?: string }>; rows: any[]; trend: number[]; error?: string };
+    dataSync?: { recordCount: number; syncedAt: string | null; lastError: string | null } | null;
+    externalSync?: { recordCount: number; syncedAt: string | null; lastError: string | null } | null;
+    designPage?: boolean;
+    summary?: any;
+    designers?: any[];
+    types?: any[];
+    activeTasks?: any[];
+    recordPage?: any;
+    socialSummary?: any;
+    kolSummary?: any;
+    reputationSummary?: any;
 }>();
 
 const blueprint = computed(() => pageBlueprints[props.module.path] || {
@@ -17,13 +41,61 @@ const blueprint = computed(() => pageBlueprints[props.module.path] || {
     metrics: props.module.features.map((label) => ({ label, value: '0' })),
     panels: ['数据工作区'],
 });
+const configured = (key: string) => props.configuredCredentials?.includes(key) || false;
+const effectiveActions = computed(() => {
+    const actions = [...(blueprint.value.actions || [])];
+    const external = ['/ads/campaign','/ads/target','/ecommerce/shopify','/ads/facebook','/ads/google','/ads/tiktok','/ads/bing','/ads/criteo','/organic/kol','/organic/edm','/organic/affiliate'];
+    if (external.includes(props.module.path) && !actions.some((action) => action.includes('刷新'))) actions.push('刷新');
+    return actions;
+});
+const requiredCredentials: Record<string, string[]> = {
+    '/workspace/brand': ['FEISHU_APP_ID', 'FEISHU_APP_SECRET'],
+    '/ecommerce/amazon': ['FEISHU_APP_ID', 'FEISHU_APP_SECRET'],
+    '/ecommerce/shopify': ['SHOPIFY_ACCESS_TOKEN', 'SHOPIFY_STORE_DOMAIN'],
+    '/ads/facebook': ['FB_ACCESS_TOKEN'],
+    '/ads/google': ['GOOGLE_ADS_CLIENT_ID', 'GOOGLE_ADS_CLIENT_SECRET', 'GOOGLE_ADS_REFRESH_TOKEN', 'GOOGLE_ADS_DEVELOPER_TOKEN', 'GOOGLE_ADS_CUSTOMER_ID'],
+    '/ads/tiktok': ['TK_ACCESS_TOKEN', 'TK_ADVERTISER_IDS'],
+    '/ads/bing': ['BING_ADS_CLIENT_ID', 'BING_ADS_CLIENT_SECRET', 'BING_ADS_REFRESH_TOKEN', 'BING_ADS_DEVELOPER_TOKEN', 'BING_ADS_ACCOUNT_ID'],
+    '/ads/criteo': ['CRITEO_API_KEY', 'CRITEO_CLIENT_SECRET'],
+    '/organic/kol': ['FEISHU_APP_ID', 'FEISHU_APP_SECRET'],
+    '/organic/edm': ['FEISHU_APP_ID', 'FEISHU_APP_SECRET'],
+    '/organic/affiliate': ['FEISHU_APP_ID', 'FEISHU_APP_SECRET'],
+    '/ecommerce/design': ['FEISHU_APP_ID', 'FEISHU_APP_SECRET'],
+    '/reputation/overview': ['FEISHU_APP_ID', 'FEISHU_APP_SECRET'],
+};
+const missingCredentials = computed(() => (requiredCredentials[props.module.path] || []).filter((key) => !configured(key)));
+const emptyDataReasons: Record<string, string> = {
+    '/ecommerce/shopify': 'Shopify 凭证已配置，但服务器返回 401：访问令牌已失效或无订单读取权限。',
+    '/ads/bing': 'Bing Ads 授权可刷新，但 Microsoft 异步报表尚未写入本地缓存。',
+    '/ads/criteo': 'Criteo 授权可连接，但当前账号尚未返回广告主维度报表。',
+    '/workspace/brand': '飞书基础凭证已配置，但“品牌资料”表格当前没有可用的本地业务记录。',
+    '/ads/campaign': '原 PostgreSQL 中没有活动主题业务表记录，飞书活动表尚未同步到本地。',
+    '/ads/target': '原项目没有可迁移的广告目标记录，页面当前显示真实的空状态。',
+    '/organic/edm': '飞书凭证已配置，但原 PostgreSQL 中没有 EDM 指标缓存记录。',
+    '/organic/affiliate': '飞书凭证已配置，但原 PostgreSQL 中没有联盟营销业务记录。',
+    '/ecommerce/design': '飞书凭证已配置，但原 PostgreSQL 中没有设计需求业务记录。',
+};
+const visibleAlert = computed(() => {
+    if (missingCredentials.value.length) return `缺少配置：${missingCredentials.value.join('、')}`;
+    if (props.analytics?.error) return props.analytics.error;
+    if (!props.analytics?.metrics?.length) return emptyDataReasons[props.module.path] || '';
+    return '';
+});
+const displayMetrics = computed(() => props.analytics?.metrics?.length ? props.analytics.metrics : blueprint.value.metrics || []);
+const displayRows = computed(() => props.analytics?.rows || []);
+const displaySubtitle = computed(() => props.analytics?.metrics?.length ? `已连接真实业务数据 · 当前展示 ${displayRows.value.length} 条最新记录` : blueprint.value.subtitle || props.module.description);
+const chartHeights = computed(() => {
+    const values = props.analytics?.trend || [];
+    const max = Math.max(...values, 1);
+    return values.length ? values.slice(-16).map((value) => Math.max(6, Math.round(value * 100 / max))) : [];
+});
 type Integration = { name: string; keys: string[]; hint?: string };
 const systemIntegrationGroups: Integration[][] = [
     [
         { name: 'OpenAI / ChatGPT', keys: ['OPENAI_API_KEY', 'OPENAI_MODEL'] },
-        { name: 'OpenAI Codex', keys: ['CODEX_API_KEY'] },
+        { name: 'OpenAI Codex', keys: ['OPENAI_API_KEY', 'OPENAI_MODEL'], hint: 'Codex 与 OpenAI 共用当前系统 API 凭证。' },
         { name: 'Google Gemini', keys: ['GEMINI_API_KEY'] },
-        { name: 'Claude (Anthropic)', keys: ['ANTHROPIC_API_KEY'] },
+        { name: 'Claude (Anthropic)', keys: ['CLAUDE_API_KEY', 'CLAUDE_MODEL'] },
     ],
     [
         { name: '邮件服务', keys: ['MAIL_HOST', 'MAIL_PORT', 'MAIL_USERNAME', 'MAIL_PASSWORD'] },
@@ -36,23 +108,50 @@ const storeIntegrationGroups: Integration[][] = [
         { name: 'Facebook / Meta Ads', keys: ['FB_ACCESS_TOKEN'] },
         { name: 'Shopify', keys: ['SHOPIFY_ACCESS_TOKEN', 'SHOPIFY_STORE_DOMAIN'] },
         { name: 'TikTok Ads', keys: ['TK_ACCESS_TOKEN', 'TK_ADVERTISER_IDS'] },
-        { name: 'Google Ads', keys: ['GOOGLE_ADS_CLIENT_ID', 'GOOGLE_ADS_CLIENT_SECRET', 'GOOGLE_ADS_REFRESH_TOKEN', 'GOOGLE_ADS_DEVELOPER_TOKEN', 'GOOGLE_ADS_CUSTOMER_ID'] },
-        { name: 'Bing / Microsoft Ads', keys: ['BING_ADS_CLIENT_ID', 'BING_ADS_CLIENT_SECRET', 'BING_ADS_REFRESH_TOKEN', 'BING_ADS_DEVELOPER_TOKEN', 'BING_ADS_ACCOUNT_ID'] },
-        { name: 'Criteo', keys: ['CRITEO_API_KEY', 'CRITEO_CLIENT_SECRET'] },
+        { name: 'Google Ads', keys: ['GOOGLE_ADS_CLIENT_ID', 'GOOGLE_ADS_CLIENT_SECRET', 'GOOGLE_ADS_REFRESH_TOKEN', 'GOOGLE_ADS_DEVELOPER_TOKEN', 'GOOGLE_ADS_CUSTOMER_ID', 'GOOGLE_ADS_LOGIN_CUSTOMER_ID'] },
+        { name: 'Bing / Microsoft Ads', keys: ['BING_ADS_CLIENT_ID', 'BING_ADS_CLIENT_SECRET', 'BING_ADS_REFRESH_TOKEN', 'BING_ADS_DEVELOPER_TOKEN', 'BING_ADS_ACCOUNT_ID', 'BING_ADS_CUSTOMER_ID'] },
+        { name: 'Criteo', keys: ['CRITEO_API_KEY', 'CRITEO_CLIENT_SECRET', 'CRITEO_ADVERTISER_ID'] },
         { name: 'YouTube Analytics', keys: ['YOUTUBE_CLIENT_ID', 'YOUTUBE_CLIENT_SECRET'] },
-        { name: 'Google Search Console / GA4', keys: ['GSC_SITE_URL', 'GA4_PROPERTY_ID'] },
+        { name: 'Google Search Console / GA4', keys: ['GSC_SITE_URL', 'GSC_CLIENT_ID', 'GSC_CLIENT_SECRET', 'GSC_REFRESH_TOKEN', 'GA4_PROPERTY_ID', 'GA4_SERVICE_ACCOUNT_JSON'] },
     ],
-    [{ name: '飞书 / Lark', keys: ['FEISHU_APP_ID', 'FEISHU_APP_SECRET'] }],
+    [
+        { name: '飞书基础授权', keys: ['FEISHU_APP_ID', 'FEISHU_APP_SECRET'] },
+        { name: '品牌资料', keys: ['FEISHU_BRAND_WIKI_URL', 'FEISHU_BRAND_SPREADSHEET_TOKEN'] },
+        { name: '活动主题', keys: ['FEISHU_CAMPAIGN_APP_TOKEN', 'FEISHU_CAMPAIGN_TABLE_ID', 'FEISHU_CAMPAIGN_VIEW_ID'] },
+        { name: '视觉设计', keys: ['FEISHU_DESIGN_APP_TOKEN', 'FEISHU_DESIGN_TABLE_ID'] },
+        { name: '红人运营', keys: ['FEISHU_KOL_APP_TOKEN', 'FEISHU_KOL_TABLE_ID', 'FEISHU_KOL_VIEW_ID'] },
+        { name: '联盟营销', keys: ['FEISHU_AFFILIATE_APP_TOKEN', 'FEISHU_AFFILIATE_TABLE_ID', 'FEISHU_AFFILIATE_VIEW_ID'] },
+        { name: 'EDM 邮件', keys: ['FEISHU_SEQUENCE_WIKI_NODE'] },
+        { name: 'SEO 日数据', keys: ['FEISHU_SEO_APP_TOKEN', 'FEISHU_SEO_DAILY_TABLE_ID'] },
+    ],
 ];
 const activeTab = ref(props.module.path === '/store-settings' ? 1 : 0);
 const activeIntegration = ref(0);
 const integrationGroups = computed(() => props.module.path === '/settings' ? systemIntegrationGroups : storeIntegrationGroups);
 const currentIntegrations = computed(() => integrationGroups.value[activeTab.value] || []);
 const selectedIntegration = computed(() => currentIntegrations.value[activeIntegration.value] || currentIntegrations.value[0]);
+const settingsMetrics = computed(() => {
+    if (props.module.path !== '/settings') return blueprint.value.metrics || [];
+    const platforms = [
+        ['OPENAI_API_KEY', 'OPENAI_MODEL'],
+        ['OPENAI_API_KEY', 'OPENAI_MODEL'],
+        ['GEMINI_API_KEY', 'GEMINI_MODEL'],
+        ['CLAUDE_API_KEY', 'CLAUDE_MODEL'],
+        ['MAIL_HOST', 'MAIL_PORT', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'FEISHU_APP_ID', 'FEISHU_APP_SECRET'],
+    ];
+    const states = platforms.map(keys => keys.filter(key => props.configuration?.[key]).length / keys.length);
+    return [
+        { label: '已接入', value: String(states.filter(value => value === 1).length) },
+        { label: '部分配置', value: String(states.filter(value => value > 0 && value < 1).length) },
+        { label: '未接入', value: String(states.filter(value => value === 0).length) },
+        { label: '平台总数', value: String(states.length) },
+    ];
+});
 watch(activeTab, () => {
  activeIntegration.value = 0;
 });
 const refreshed = ref(false);
+const syncing = ref(false);
 const enabled = ref(Boolean(props.studentDiscount?.enabled));
 const report = ref('');
 const reporter = ref('');
@@ -83,6 +182,21 @@ router.delete(`/configuration/${configScope.value}/${key}`);
 }
 };
 const handleAction = (action: string) => {
+    if (props.module.path === '/ecommerce/design' && action.includes('刷新')) {
+        syncing.value = true;
+        router.post('/ecommerce/design/refresh', {}, {
+            preserveScroll: true,
+            onSuccess: () => { refreshed.value = true; window.setTimeout(() => refreshed.value = false, 1800); },
+            onFinish: () => { syncing.value = false; },
+        });
+
+        return;
+    }
+    if (action.includes('刷新') && ['/ads/campaign','/ads/target','/ecommerce/shopify','/ads/facebook','/ads/google','/ads/tiktok','/ads/bing','/ads/criteo','/organic/kol','/organic/edm','/organic/affiliate'].includes(props.module.path)) {
+        syncing.value = true;
+        router.post('/data-sync/refresh', { path: props.module.path }, { preserveScroll: true, onSuccess: () => { refreshed.value=true; window.setTimeout(()=>refreshed.value=false,1800); }, onFinish: () => syncing.value=false });
+        return;
+    }
     if (props.module.path === '/reputation/risk-sync' && action.includes('分析')) {
         router.post('/reputation/analyze');
 
@@ -106,28 +220,38 @@ return;
 </script>
 
 <template>
-    <Head :title="module.title" />
+    <DesignView v-if="designPage" :summary="summary" :designers="designers || []" :types="types || []" :active-tasks="activeTasks || []" :record-page="recordPage" :data-sync="dataSync" />
+    <AffiliateView v-else-if="module.path === '/organic/affiliate'" :analytics="analytics" :external-sync="externalSync" />
+    <EdmView v-else-if="module.path === '/organic/edm'" :analytics="analytics" :external-sync="externalSync" />
+    <ReputationOverview v-else-if="module.path === '/reputation/overview'" :summary="reputationSummary" :record-page="recordPage" />
+    <SocialView v-else-if="module.path === '/organic/social'" :summary="socialSummary" :record-page="recordPage" />
+    <KolView v-else-if="module.path === '/organic/kol'" :summary="kolSummary" :record-page="recordPage" />
+    <AdsPlatformView v-else-if="['/ads/facebook','/ads/google','/ads/tiktok','/ads/bing','/ads/criteo'].includes(module.path)" :module="module" :analytics="analytics" :external-sync="externalSync" />
+    <ReputationView v-else-if="['/reputation/google-reviews','/reputation/trustpilot','/reputation/website-reviews','/reputation/reddit'].includes(module.path)" :module="module" :summary="reputationSummary" :record-page="recordPage" />
+    <template v-else><Head :title="module.title" />
     <div class="deco-page">
         <div class="deco-header">
             <div>
                 <h1 class="deco-title">{{ module.title }}</h1>
-                <p class="deco-subtitle">{{ blueprint.subtitle || module.description }}</p>
+                <p class="deco-subtitle">{{ displaySubtitle }}</p>
             </div>
             <div class="deco-actions">
                 <input v-if="!['ai','student','plugin','settings'].includes(blueprint.kind || '')" class="deco-input deco-date" value="2026-08-05　-　2026-08-11" aria-label="日期范围" />
-                <button v-for="action in blueprint.actions" :key="action" class="deco-button" :class="{ primary: action.includes('刷新') || action.includes('分析') }" @click="action.includes('新增评论')?openRecord('review'):action.includes('新增帖子')?openRecord('reddit'):handleAction(action)">{{ action }}</button>
+                <button v-for="action in effectiveActions" :key="action" class="deco-button" :class="{ primary: action.includes('刷新') || action.includes('分析') }" :disabled="syncing" @click="action.includes('新增评论')?openRecord('review'):action.includes('新增帖子')?openRecord('reddit'):handleAction(action)">{{ syncing && action.includes('刷新') ? '同步中…' : action }}</button>
                 <span v-if="refreshed" class="deco-pill green">操作成功</span>
+                <span v-if="module.path === '/ecommerce/design' && dataSync?.syncedAt" class="text-xs text-[#929aa4]">最近同步：{{ new Date(dataSync.syncedAt).toLocaleString('zh-CN') }}</span>
+                <span v-if="externalSync?.syncedAt" class="text-xs text-[#929aa4]">最近同步：{{ new Date(externalSync.syncedAt).toLocaleString('zh-CN') }}</span>
             </div>
         </div>
 
         <template v-if="blueprint.kind === 'ai'">
             <div class="grid min-h-[calc(100vh-116px)] grid-cols-[280px_1fr] overflow-hidden border border-[#343941] bg-[#15191d]">
                 <aside class="border-r border-[#343941] bg-[#252525] p-4">
-                    <h2 class="deco-card-title">渠道评分</h2>
-                    <div v-for="(score, name) in {Facebook:30,Google:30,TikTok:30,Bing:30,Criteo:30,SEO:74,GEO:68}" :key="name" class="mb-3 grid grid-cols-[70px_1fr_28px] items-center gap-2 text-xs">
-                        <span>{{ name }}</span><span class="h-1.5 overflow-hidden rounded bg-[#35383b]"><i class="block h-full rounded bg-blue-500" :style="{width: score+'%'}"></i></span><b class="text-red-400">{{ score }}</b>
+                    <h2 class="deco-card-title">真实业务数据</h2>
+                    <div v-for="metric in analytics?.metrics || []" :key="metric.label" class="mb-3 flex items-center justify-between rounded bg-[#303236] px-3 py-2 text-xs">
+                        <span>{{ metric.label }}</span><b class="text-blue-400">{{ metric.value }}</b>
                     </div>
-                    <h2 class="deco-card-title mt-7">历史分析</h2><p class="text-xs text-[#929aa4]">暂无历史记录</p>
+                    <h2 class="deco-card-title mt-7">历史分析</h2><p class="text-xs text-[#929aa4]">{{ analytics?.rows?.length || 0 }} 条历史会话</p>
                     <button class="deco-button mt-8 w-full">+ 新建对话</button>
                 </aside>
                 <main class="relative flex flex-col p-5">
@@ -164,7 +288,7 @@ return;
         </template>
 
         <template v-else-if="blueprint.kind === 'settings'">
-            <div v-if="blueprint.metrics" class="deco-metrics"><article v-for="metric in blueprint.metrics" :key="metric.label" class="deco-card deco-metric"><p class="deco-metric-label">{{ metric.label }}</p><p class="deco-metric-value">{{ metric.value }}</p></article></div>
+            <div v-if="settingsMetrics.length" class="deco-metrics"><article v-for="metric in settingsMetrics" :key="metric.label" class="deco-card deco-metric"><p class="deco-metric-label">{{ metric.label }}</p><p class="deco-metric-value">{{ metric.value }}</p></article></div>
             <section class="deco-card">
                 <div class="deco-tabs"><button v-for="(tab,index) in blueprint.tabs" :key="tab" class="deco-tab" :class="{active:index===activeTab}" @click="activeTab=index">{{ tab }}</button></div>
                 <div class="grid gap-5 md:grid-cols-[220px_1fr]">
@@ -177,14 +301,15 @@ return;
         </template>
 
         <template v-else>
-            <div v-if="blueprint.alert" class="deco-alert" :class="{warning:blueprint.alertTone==='warning'}">🔴 {{ blueprint.alert }}</div>
+            <div v-if="visibleAlert" class="deco-alert" :class="{warning:blueprint.alertTone==='warning'}">● {{ visibleAlert }}</div>
             <div v-if="blueprint.tabs?.length" class="deco-tabs"><button v-for="(tab,index) in blueprint.tabs" :key="tab" class="deco-tab" :class="{active:index===activeTab}" @click="activeTab=index">{{ tab }}</button></div>
-            <div v-if="blueprint.metrics?.length" class="deco-metrics" :class="{five:blueprint.metrics.length===5,six:blueprint.metrics.length===6}"><article v-for="metric in blueprint.metrics" :key="metric.label" class="deco-card deco-metric"><p class="deco-metric-label">{{ metric.label }}</p><p class="deco-metric-value">{{ metric.value }}</p><p v-if="metric.detail" class="deco-metric-detail">{{ metric.detail }}</p></article></div>
-            <div v-if="blueprint.panels?.length" class="deco-grid-2"><section v-for="(panel,index) in blueprint.panels" :key="panel" class="deco-card deco-panel"><h2 class="deco-card-title">{{ panel }}</h2><div v-if="index<2 && blueprint.kind!=='simple'" class="deco-chart-bars"><span v-for="height in [24,48,36,72,45,62,84,54]" :key="height" :style="{height:height+'%'}"></span></div><div v-else class="deco-empty">暂无数据</div></section></div>
-            <div v-if="blueprint.tableHeaders" class="deco-table-wrap"><table class="deco-table"><thead><tr><th v-for="heading in blueprint.tableHeaders" :key="heading">{{ heading }}</th></tr></thead><tbody><tr><td :colspan="blueprint.tableHeaders.length" class="!py-16 text-center text-[#929aa4]">暂无数据</td></tr></tbody></table></div>
+            <div v-if="displayMetrics.length" class="deco-metrics" :class="{five:displayMetrics.length===5,six:displayMetrics.length===6}"><article v-for="metric in displayMetrics" :key="metric.label" class="deco-card deco-metric"><p class="deco-metric-label">{{ metric.label }}</p><p class="deco-metric-value">{{ metric.value }}</p><p v-if="metric.detail" class="deco-metric-detail">{{ metric.detail }}</p></article></div>
+            <div v-if="blueprint.panels?.length" class="deco-grid-2"><section v-for="(panel,index) in blueprint.panels" :key="panel" class="deco-card deco-panel"><h2 class="deco-card-title">{{ panel }}</h2><div v-if="index<2 && chartHeights.length" class="deco-chart-bars"><span v-for="(height, chartIndex) in chartHeights" :key="chartIndex" :style="{height:height+'%'}"></span></div><div v-else class="deco-empty">暂无可绘制的趋势数据</div></section></div>
+            <div v-if="blueprint.tableHeaders" class="deco-table-wrap"><table class="deco-table"><thead><tr><th v-for="heading in blueprint.tableHeaders" :key="heading">{{ heading }}</th></tr></thead><tbody><tr v-for="row in displayRows" :key="row.id"><td :colspan="blueprint.tableHeaders.length"><b>{{ row.title || row.description || row.productName || row.accountName || row.platform || row.id }}</b><span class="ml-3 text-[#929aa4]">{{ row.publishedAt || row.purchaseDate || row.createdAt || '' }}</span></td></tr><tr v-if="!displayRows.length"><td :colspan="blueprint.tableHeaders.length" class="!py-16 text-center text-[#929aa4]">暂无已同步数据</td></tr></tbody></table></div>
+            <section v-else-if="displayRows.length" class="deco-card mt-4"><h2 class="deco-card-title">最新业务记录</h2><article v-for="row in displayRows.slice(0, 20)" :key="row.id" class="flex items-center justify-between border-b border-[#3a3f45] py-3 last:border-0"><div><b>{{ row.title || row.description || row.productName || row.accountName || row.platform || row.id }}</b><p class="mt-1 text-xs text-[#929aa4]">{{ row.publishedAt || row.purchaseDate || row.createdAt || '' }}</p></div><span class="deco-pill">{{ row.orderStatus || row.postType || row.sentiment || '已同步' }}</span></article></section>
             <section v-if="Array.isArray(records) && records.length" class="deco-card mt-4"><h2 class="deco-card-title">最新记录</h2><article v-for="record in records" :key="record.id" class="border-b border-[#3a3f45] py-3 last:border-0"><div class="flex items-center justify-between"><b>{{record.title || record.platform}}</b><span class="deco-pill">{{record.star ? record.star+'★' : record.sentiment}}</span></div><p class="mt-2 text-sm text-[#b7bec7]">{{record.content || record.body}}</p></article></section>
         </template>
 
         <div v-if="recordModal" class="fixed inset-0 z-[90] grid place-items-center bg-black/70 p-4" @click.self="recordModal=false"><form class="deco-card w-full max-w-lg" @submit.prevent="submitRecord"><div class="flex items-center justify-between"><h2 class="deco-card-title">新增{{recordEntity==='review'?'评论':recordEntity==='reddit'?'帖子':recordEntity==='risk'?'风险':'资源需求'}}</h2><button type="button" @click="recordModal=false">×</button></div><div class="grid gap-3"><input v-if="recordEntity==='reddit'" v-model="recordTitle" class="deco-input" placeholder="帖子标题" required><select v-if="recordEntity==='review'" v-model="recordStar" class="deco-input"><option v-for="star in [5,4,3,2,1]" :key="star" :value="star">{{star}} 星</option></select><textarea v-model="recordContent" class="deco-input min-h-32 py-3" placeholder="请输入内容" required></textarea><button class="deco-button primary">保存记录</button></div></form></div>
-    </div>
+    </div></template>
 </template>

@@ -4,6 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 defineProps<{
     metrics: Array<{ label: string; value: number | string; hint: string }>;
     systems: Array<{ name: string; status: string; detail: string }>;
+    amazon: { sales: number; orders: number; adSpend: number };
 }>();
 </script>
 
@@ -36,7 +37,7 @@ defineProps<{
                 <h2 class="deco-card-title !mb-0">亚马逊</h2>
                 <Link href="/ecommerce/amazon" class="text-sm text-orange-400">查看详情 →</Link>
             </div>
-            <div class="rounded-md bg-[#2d3034] px-4 py-5 text-sm text-[#a4abb4]">📊　暂无亚马逊数据</div>
+            <div class="grid grid-cols-3 gap-4 rounded-md bg-[#2d3034] px-4 py-5"><div><p class="deco-metric-label">销售额</p><b class="mt-2 block text-xl text-orange-400">${{ amazon.sales.toLocaleString() }}</b></div><div><p class="deco-metric-label">订单数</p><b class="mt-2 block text-xl">{{ amazon.orders.toLocaleString() }}</b></div><div><p class="deco-metric-label">广告花费</p><b class="mt-2 block text-xl">${{ amazon.adSpend.toLocaleString() }}</b></div></div>
         </section>
 
         <section class="mt-4 grid gap-3 md:grid-cols-4">

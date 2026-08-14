@@ -27,6 +27,8 @@ const filtered = computed(() => props.employees.filter((employee) =>
     (!search.value || `${employee.name} ${employee.username} ${employee.email}`.toLowerCase().includes(search.value.toLowerCase()))
     && (!status.value || employee.status === status.value),
 ));
+const activeCount = computed(() => props.employees.filter(employee => employee.status === 'ACTIVE').length);
+const multiStoreCount = computed(() => props.employees.filter(employee => employee.storeIds.length > 1).length);
 
 const createForm = useForm({
     name: '', email: '', password: '', jobTitle: '', roleId: '',
@@ -76,9 +78,10 @@ router.delete(`/employees/${employee.id}`);
 <template>
     <Head title="人员档案管理" />
     <div class="deco-page">
+        <div class="deco-metrics mb-4"><article class="deco-card deco-metric"><p class="deco-metric-label">组织账号</p><p class="deco-metric-value">{{ employees.length }}</p><p class="deco-metric-detail">统一登录身份</p></article><article class="deco-card deco-metric"><p class="deco-metric-label">启用账号</p><p class="deco-metric-value">{{ activeCount }}</p><p class="deco-metric-detail">可正常登录</p></article><article class="deco-card deco-metric"><p class="deco-metric-label">跨店成员</p><p class="deco-metric-value">{{ multiStoreCount }}</p><p class="deco-metric-detail">可访问两家及以上店铺</p></article><article class="deco-card deco-metric"><p class="deco-metric-label">超级管理员</p><p class="deco-metric-value">{{ employees.filter(employee => employee.isDefaultAdmin).length }}</p><p class="deco-metric-detail">拥有全局管理权限</p></article></div>
         <section class="deco-card">
             <div class="deco-header !mb-6">
-                <div><h1 class="deco-title">人员档案管理</h1><p class="deco-subtitle">员工账号、状态、角色和店铺访问管理</p></div>
+                <div><h1 class="deco-title">人员与访问管理</h1><p class="deco-subtitle">组织身份统一管理；店铺访问和店铺角色可在店铺管理中进一步覆盖。</p></div>
                 <button class="deco-button primary" @click="showCreate = true">新增用户</button>
             </div>
             <div class="deco-toolbar">

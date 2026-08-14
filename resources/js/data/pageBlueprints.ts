@@ -31,7 +31,7 @@ export const pageBlueprints: Record<string, PageBlueprint> = {
     '/organic/kol': { subtitle:'数据来源：飞书多维表格 · 0 条合作记录', alert:'飞书数据加载失败：飞书环境变量未配置（需要 FEISHU_APP_ID 和 FEISHU_APP_SECRET）', alertTone:'warning', tabs:['合作数据明细','资源库','AI 推荐','红人运营增长洞察'], metrics:[{label:'合作红人数',value:'0',detail:'持平'},{label:'总浏览量',value:'0'},{label:'均播',value:'0'},{label:'平均互动率',value:'0.00%'}], panels:['发布日期浏览趋势','红人浏览 TOP 10','数据变化趋势','浏览量 / 互动率分析'], tableHeaders:['红人 title','合作价格','发布日期','均播','合作链接','赞','评','浏览','互动率','操作'] },
     '/organic/edm': { subtitle:'邮件列表健康度与自动化序列分析', alert:'飞书环境变量未配置（需要 FEISHU_APP_ID 和 FEISHU_APP_SECRET）', tabs:['📊 总览','📧 序列表现','👥 用户分层','🎯 目标看板','💡 AI 分析'], metrics:[{label:'Email Revenue',value:'$0'},{label:'Open Rate',value:'—'},{label:'CTR',value:'—'},{label:'CVR',value:'—'},{label:'Subscribers',value:'—'},{label:'Unsubscribe Rate',value:'—'}] },
     '/organic/affiliate': { kind:'simple', subtitle:'Affiliate Marketing · 联盟合作伙伴数据看板', alert:'数据加载失败：飞书凭证未配置，请在系统设置中配置 FEISHU_APP_ID 和 FEISHU_APP_SECRET', actions:['重试'], panels:['联盟合作伙伴数据'] },
-    '/ecommerce/design': { kind:'simple', subtitle:'设计需求管理与效率追踪', alert:'飞书环境变量未配置', tabs:['📊 效率总览','📋 需求列表'], panels:['设计效率总览'] },
+    '/ecommerce/design': { kind:'simple', subtitle:'设计需求管理与效率追踪', actions:['刷新'], alert:'飞书环境变量未配置', tabs:['📊 效率总览','📋 需求列表'], panels:['设计效率总览'] },
     '/reputation/overview': { subtitle:'跨平台舆情监控与数据汇总 — Trustpilot · 官网评论 · Google 直评 · Reddit', alert:'目标数据加载失败：飞书凭证未配置', tabs:['🎯 目标看板','💬 评论管理','🔴 Reddit','🧵 Threads','💡 AI 分析'], metrics:zero(['总评论','正面占比','待回复','风险项']), panels:['跨平台声量','情绪趋势'] },
     '/reputation/google-reviews': { subtitle:'Google 商家评价管理与回复策略', tabs:['📊 总览','💬 评价管理','🎯 AI 分析'], metrics:[{label:'Google 评分',value:'4.4★',detail:'↑ 0.2'},{label:'总评价数',value:'2,841',detail:'本月 +184'},{label:'本月新增',value:'184',detail:'↑ 12%'},{label:'未回复',value:'4',detail:'需跟进'}], panels:['星级分布','高频话题','🚨 待回复评价（4 条）'] },
     '/reputation/trustpilot': { subtitle:'评价管理与口碑分析', actions:['+ 新增评论'], tabs:['📊 总览','💬 评价管理','🎯 AI 分析'], metrics:[{label:'综合评分',value:'0.0★',detail:'基于 0 条'},{label:'总评价数',value:'0'},{label:'正面占比',value:'0%'},{label:'负面占比',value:'0%'},{label:'本周新增',value:'0'},{label:'紧急处理',value:'0'}], panels:['星级分布','情感分布','Top Mentions','差评集中问题','好评可用率'] },
@@ -40,6 +40,6 @@ export const pageBlueprints: Record<string, PageBlueprint> = {
     '/reputation/risk-sync': { kind:'risk', subtitle:'AI 自动识别 + 手动添加舆情风险项', actions:['🔍 立即分析'] },
     '/reputation/weekly-report': { kind:'report', subtitle:'基于各平台数据自动生成舆情周报' },
     '/plugins': { kind:'plugin', subtitle:'统一管理内部开发的店铺插件、配置入口和运行状态。', metrics:zero(['已安装插件','已启用','需要配置']) },
-    '/store-settings': { kind:'settings', subtitle:'配置当前店铺「默认店铺」的业务凭证与飞书数据链接。每个店铺相互独立。', tabs:['店铺 Logo','业务凭证','飞书数据链接'] },
+    '/store-settings': { kind:'settings', subtitle:'配置当前店铺的业务凭证与飞书数据链接。所有密钥按店铺加密隔离。', tabs:['店铺资料','业务凭证','飞书数据链接'] },
     '/settings': { kind:'settings', subtitle:'管理系统基础配置和平台 API 凭证接入状态', metrics:[{label:'已接入',value:'1'},{label:'部分配置',value:'0'},{label:'未接入',value:'4'},{label:'平台总数',value:'5'}], tabs:['🤖 AI 大模型','⚙️ 系统基础'] },
 };
