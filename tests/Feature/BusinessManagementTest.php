@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class BusinessManagementTest extends TestCase
@@ -72,6 +73,73 @@ class BusinessManagementTest extends TestCase
         ])->assertSessionHasNoErrors();
         $this->assertDatabaseHas('ReputationWeeklyReport', [
             'storeId' => 'default-store', 'reporter' => '运营负责人', 'reportTo' => '管理层',
+        ]);
+    }
+
+    public function test_default_admin_is_presented_with_all_permissions_and_all_active_stores(): void
+    {
+        $admin = $this->admin();
+        DB::table('Store')->insert([
+            'id' => 'second-store',
+            'slug' => 'second-store',
+            'name' => '第二店铺',
+            'timezone' => 'America/Los_Angeles',
+            'status' => 'ACTIVE',
+            'createdAt' => now(),
+            'updatedAt' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/employees')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Employees')
+                ->where('employees.0.isDefaultAdmin', true)
+                ->where('employees.0.hasGlobalAccess', true)
+                ->where('employees.0.roles.0', '超级管理员（全部权限）')
+                ->where('employees.0.storeIds', fn ($storeIds) => collect($storeIds)->sort()->values()->all() === ['default-store', 'second-store']),
+            );
+    }
+
+    public function test_default_admin_cannot_be_downgraded_through_employee_editor(): void
+    {
+        $admin = $this->admin();
+        $employeeId = DB::table('Employee')->where('username', 'admin')->value('id');
+        DB::table('Store')->insert([
+            'id' => 'second-store',
+            'slug' => 'second-store',
+            'name' => '第二店铺',
+            'timezone' => 'America/Los_Angeles',
+            'status' => 'ACTIVE',
+            'createdAt' => now(),
+            'updatedAt' => now(),
+        ]);
+        DB::table('EmployeeRole')->insert([
+            'employeeId' => $employeeId,
+            'roleId' => 'system-super-admin',
+            'assignedAt' => now(),
+        ]);
+        DB::table('StoreMember')->insert([
+            'storeId' => 'second-store',
+            'employeeId' => $employeeId,
+            'role' => 'OWNER',
+            'assignedAt' => now(),
+        ]);
+
+        $this->actingAs($admin)->put("/employees/{$employeeId}", [
+            'name' => '系统管理员',
+            'status' => 'ACTIVE',
+            'roleIds' => [],
+            'storeIds' => ['default-store'],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('EmployeeRole', [
+            'employeeId' => $employeeId,
+            'roleId' => 'system-super-admin',
+        ]);
+        $this->assertDatabaseHas('StoreMember', [
+            'storeId' => 'second-store',
+            'employeeId' => $employeeId,
         ]);
     }
 

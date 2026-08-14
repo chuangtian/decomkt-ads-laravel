@@ -14,19 +14,49 @@ class EmployeeController extends Controller
 {
     public function index(Request $request): Response
     {
-        $employees = DB::table('Employee')->orderByDesc('isDefaultAdmin')->orderBy('name')->get()->map(function ($employee) {
-            $employee->roles = DB::table('EmployeeRole')->join('Role', 'Role.id', '=', 'EmployeeRole.roleId')->where('EmployeeRole.employeeId', $employee->id)->pluck('Role.name');
-            $employee->roleIds = DB::table('EmployeeRole')->where('employeeId', $employee->id)->pluck('roleId');
-            $employee->stores = DB::table('StoreMember')->join('Store', 'Store.id', '=', 'StoreMember.storeId')->where('StoreMember.employeeId', $employee->id)->pluck('Store.name');
-            $employee->storeIds = DB::table('StoreMember')->where('employeeId', $employee->id)->pluck('storeId');
+        $roles = DB::table('Role')->orderBy('name')->get(['id', 'name', 'key']);
+        $superAdminRoleId = (string) ($roles->where('key', 'super-admin')->pluck('id')->first() ?: 'system-super-admin');
+        $stores = DB::table('Store')->where('status', 'ACTIVE')->orderBy('name')->get(['id', 'name']);
+        $employees = DB::table('Employee')->orderByDesc('isDefaultAdmin')->orderBy('name')->get();
+        $employeeIds = $employees->pluck('id');
+        $roleAssignments = DB::table('EmployeeRole')
+            ->join('Role', 'Role.id', '=', 'EmployeeRole.roleId')
+            ->whereIn('EmployeeRole.employeeId', $employeeIds)
+            ->get(['EmployeeRole.employeeId', 'EmployeeRole.roleId', 'Role.name'])
+            ->groupBy('employeeId');
+        $storeAssignments = DB::table('StoreMember')
+            ->join('Store', 'Store.id', '=', 'StoreMember.storeId')
+            ->whereIn('StoreMember.employeeId', $employeeIds)
+            ->get(['StoreMember.employeeId', 'StoreMember.storeId', 'Store.name'])
+            ->groupBy('employeeId');
+
+        $employees->transform(function ($employee) use ($roleAssignments, $storeAssignments, $stores, $superAdminRoleId) {
+            $employee->isDefaultAdmin = (bool) $employee->isDefaultAdmin;
+            $employee->hasGlobalAccess = $employee->isDefaultAdmin;
+
+            if ($employee->isDefaultAdmin) {
+                $employee->roles = collect(['超级管理员（全部权限）']);
+                $employee->roleIds = collect([$superAdminRoleId]);
+                $employee->stores = $stores->pluck('name');
+                $employee->storeIds = $stores->pluck('id');
+
+                return $employee;
+            }
+
+            $assignedRoles = $roleAssignments->get($employee->id, collect());
+            $assignedStores = $storeAssignments->get($employee->id, collect());
+            $employee->roles = $assignedRoles->pluck('name');
+            $employee->roleIds = $assignedRoles->pluck('roleId');
+            $employee->stores = $assignedStores->pluck('name');
+            $employee->storeIds = $assignedStores->pluck('storeId');
 
             return $employee;
         });
 
         return Inertia::render('Employees', [
             'employees' => $employees,
-            'roles' => DB::table('Role')->orderBy('name')->get(['id', 'name']),
-            'stores' => DB::table('Store')->where('status', 'ACTIVE')->orderBy('name')->get(['id', 'name']),
+            'roles' => $roles,
+            'stores' => $stores,
         ]);
     }
 
@@ -65,7 +95,8 @@ class EmployeeController extends Controller
 
     public function update(Request $request, int $employee): RedirectResponse
     {
-        abort_if((bool) DB::table('Employee')->where('id', $employee)->value('isDefaultAdmin') && $request->input('status') === 'DISABLED', 422, '默认管理员不能停用');
+        $isDefaultAdmin = (bool) DB::table('Employee')->where('id', $employee)->value('isDefaultAdmin');
+        abort_if($isDefaultAdmin && $request->input('status') === 'DISABLED', 422, '默认管理员不能停用');
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:120'],
             'jobTitle' => ['nullable', 'string', 'max:120'],
@@ -76,18 +107,18 @@ class EmployeeController extends Controller
             'storeIds.*' => ['string', 'exists:Store,id'],
         ]);
 
-        DB::transaction(function () use ($data, $employee) {
+        DB::transaction(function () use ($data, $employee, $isDefaultAdmin) {
             $attributes = collect($data)->only(['name', 'jobTitle', 'status'])->all();
             if ($attributes !== []) {
                 DB::table('Employee')->where('id', $employee)->update([...$attributes, 'updatedAt' => now()]);
             }
-            if (array_key_exists('roleIds', $data)) {
+            if (! $isDefaultAdmin && array_key_exists('roleIds', $data)) {
                 DB::table('EmployeeRole')->where('employeeId', $employee)->delete();
                 foreach (array_unique($data['roleIds']) as $roleId) {
                     DB::table('EmployeeRole')->insert(['employeeId' => $employee, 'roleId' => $roleId, 'assignedAt' => now()]);
                 }
             }
-            if (array_key_exists('storeIds', $data)) {
+            if (! $isDefaultAdmin && array_key_exists('storeIds', $data)) {
                 DB::table('StoreMember')->where('employeeId', $employee)->delete();
                 foreach (array_unique($data['storeIds']) as $storeId) {
                     DB::table('StoreMember')->insert(['storeId' => $storeId, 'employeeId' => $employee, 'role' => 'MEMBER', 'assignedAt' => now()]);
