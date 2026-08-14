@@ -7,12 +7,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $existingRole = DB::table('Role')
+        $existingRoleId = DB::table('Role')
             ->where('id', 'system-super-admin')
             ->orWhere('key', 'super-admin')
             ->orWhere('name', '超级管理员')
-            ->first();
-        $roleId = (string) ($existingRole?->id ?? 'system-super-admin');
+            ->value('id');
+        $roleId = (string) ($existingRoleId ?: 'system-super-admin');
+        $roleCreatedAt = DB::table('Role')->where('id', $roleId)->value('createdAt');
 
         DB::table('Role')->updateOrInsert(
             ['id' => $roleId],
@@ -21,7 +22,7 @@ return new class extends Migration
                 'name' => '超级管理员',
                 'description' => '自动拥有全部店铺、页面和系统管理权限',
                 'isSystem' => true,
-                'createdAt' => $existingRole?->createdAt ?? now(),
+                'createdAt' => $roleCreatedAt ?: now(),
                 'updatedAt' => now(),
             ],
         );

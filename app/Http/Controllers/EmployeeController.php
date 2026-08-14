@@ -15,7 +15,7 @@ class EmployeeController extends Controller
     public function index(Request $request): Response
     {
         $roles = DB::table('Role')->orderBy('name')->get(['id', 'name', 'key']);
-        $superAdminRoleId = $roles->firstWhere('key', 'super-admin')?->id ?? 'system-super-admin';
+        $superAdminRoleId = (string) ($roles->where('key', 'super-admin')->pluck('id')->first() ?: 'system-super-admin');
         $stores = DB::table('Store')->where('status', 'ACTIVE')->orderBy('name')->get(['id', 'name']);
         $employees = DB::table('Employee')->orderByDesc('isDefaultAdmin')->orderBy('name')->get();
         $employeeIds = $employees->pluck('id');
