@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Domain\ShopifyInstallation;
 use App\Models\User;
+use App\Services\Shopify\ShopifyAdminService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
@@ -225,6 +227,68 @@ class BusinessManagementTest extends TestCase
             'storeId' => 'default-store',
             'key' => 'STUDENT_DISCOUNT_LOGO_URL',
         ]);
+    }
+
+    public function test_admin_can_purge_only_the_current_store_claims_and_shopify_discounts(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('student-discounts/default-store/student-id.png', 'image');
+        $shopify = $this->mock(ShopifyAdminService::class);
+        $shopify->shouldReceive('deleteDiscount')
+            ->once()
+            ->withArgs(fn (ShopifyInstallation $installation, string $id) => $installation->storeId === 'default-store'
+                && $id === 'gid://shopify/DiscountCodeNode/123')
+            ->andReturnNull();
+        DB::table('ShopifyInstallation')->insert([
+            'id' => 'installation-1',
+            'storeId' => 'default-store',
+            'shopDomain' => 'example.myshopify.com',
+            'clientId' => 'client-id',
+            'status' => 'INSTALLED',
+            'createdAt' => now(),
+            'updatedAt' => now(),
+        ]);
+        DB::table('StudentDiscountClaim')->insert([
+            [
+                'id' => 'claim-current-store',
+                'storeId' => 'default-store',
+                'campaignId' => 'campaign-current-store',
+                'email' => 'student@example.com',
+                'emailNormalized' => 'student@example.com',
+                'schoolName' => 'Example University',
+                'verificationMethod' => 'STUDENT_ID',
+                'evidencePath' => 'student-discounts/default-store/student-id.png',
+                'code' => 'TEST-CURRENT',
+                'shopifyDiscountId' => 'gid://shopify/DiscountCodeNode/123',
+                'status' => 'ISSUED',
+                'createdAt' => now(),
+                'updatedAt' => now(),
+            ],
+            [
+                'id' => 'claim-other-store',
+                'storeId' => 'other-store',
+                'campaignId' => 'campaign-other-store',
+                'email' => 'other@example.com',
+                'emailNormalized' => 'other@example.com',
+                'schoolName' => 'Other University',
+                'verificationMethod' => 'EDUCATION_EMAIL',
+                'evidencePath' => null,
+                'code' => 'TEST-OTHER',
+                'shopifyDiscountId' => null,
+                'status' => 'ISSUED',
+                'createdAt' => now(),
+                'updatedAt' => now(),
+            ],
+        ]);
+
+        $this->actingAs($this->admin())
+            ->delete('/student-discounts/claims', ['confirmation' => 'DELETE'])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', '已删除当前店铺 1 条申请数据及 1 个 Shopify 优惠码');
+
+        $this->assertDatabaseMissing('StudentDiscountClaim', ['id' => 'claim-current-store']);
+        $this->assertDatabaseHas('StudentDiscountClaim', ['id' => 'claim-other-store']);
+        Storage::disk('local')->assertMissing('student-discounts/default-store/student-id.png');
     }
 
     public function test_non_employee_cannot_open_dashboard(): void

@@ -117,6 +117,7 @@ const statusLabel = computed(() => {
 });
 const showSmtpPassword = ref(false);
 const successNotice = ref('');
+const purgingClaims = ref(false);
 let successNoticeTimer: ReturnType<typeof setTimeout> | null = null;
 const showSuccessNotice = (message: string) => {
     successNotice.value = message;
@@ -210,6 +211,35 @@ const removeLogo = () => {
         });
     }
 };
+const purgeClaims = () => {
+    if (!props.claims.length || purgingClaims.value) {
+        return;
+    }
+
+    const confirmed = window.confirm(
+        `确定清空当前店铺的 ${props.metrics.total} 条申请数据吗？\n\n相关 Shopify 优惠码和学生证图片也会永久删除，且无法恢复。`,
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    purgingClaims.value = true;
+    router.delete('/student-discounts/claims', {
+        data: { confirmation: 'DELETE' },
+        preserveScroll: true,
+        onSuccess: () => showSuccessNotice('当前店铺申请数据已清空'),
+        onError: (errors) =>
+            window.alert(
+                errors.purgeClaims ||
+                    errors.confirmation ||
+                    '清空失败，请稍后重试。',
+            ),
+        onFinish: () => {
+            purgingClaims.value = false;
+        },
+    });
+};
 </script>
 
 <template>
@@ -292,12 +322,26 @@ const removeLogo = () => {
                 </article>
             </div>
             <section class="deco-card overflow-hidden !p-0">
-                <div class="border-b border-[#35393f] p-5">
-                    <h2 class="deco-card-title !mb-1">申请与审核</h2>
-                    <p class="text-sm text-[#929aa4]">
-                        待人工审核记录始终排在最前；通过或拒绝请在 Shopify
-                        后台操作。
-                    </p>
+                <div
+                    class="flex flex-wrap items-center justify-between gap-4 border-b border-[#35393f] p-5"
+                >
+                    <div>
+                        <h2 class="deco-card-title !mb-1">申请与审核</h2>
+                        <p class="text-sm text-[#929aa4]">
+                            待人工审核记录始终排在最前；通过或拒绝请在 Shopify
+                            后台操作。
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-lg border border-red-500 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                        :disabled="purgingClaims || !claims.length"
+                        @click="purgeClaims"
+                    >
+                        {{
+                            purgingClaims ? '正在清空…' : '清空当前店铺申请数据'
+                        }}
+                    </button>
                 </div>
                 <div v-if="claims.length" class="overflow-x-auto">
                     <table class="w-full min-w-[980px] text-left text-sm">

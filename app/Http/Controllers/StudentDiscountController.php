@@ -2,18 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Domain\ShopifyInstallation;
 use App\Models\Domain\StudentDiscountCampaign;
 use App\Models\Domain\StudentDiscountClaim;
 use App\Services\Credentials\CredentialService;
+use App\Services\Shopify\ShopifyAdminService;
 use App\Services\Stores\StoreContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class StudentDiscountController extends Controller
 {
@@ -207,6 +211,65 @@ class StudentDiscountController extends Controller
         }
 
         return back()->with('success', '邮件 Logo 已删除，可以重新上传');
+    }
+
+    public function purgeClaims(Request $request, StoreContext $storeContext, ShopifyAdminService $shopify): RedirectResponse
+    {
+        $request->validate([
+            'confirmation' => ['required', Rule::in(['DELETE'])],
+        ]);
+        $storeId = $storeContext->id();
+        $claims = StudentDiscountClaim::query()
+            ->where('storeId', $storeId)
+            ->get(['id', 'shopifyDiscountId', 'evidencePath']);
+        if ($claims->isEmpty()) {
+            return back()->with('success', '当前店铺没有申请数据需要删除');
+        }
+
+        $discountIds = $claims->pluck('shopifyDiscountId')->filter()->unique()->values();
+        $installation = ShopifyInstallation::query()->where('storeId', $storeId)->first();
+        $deletedDiscounts = 0;
+        if ($discountIds->isNotEmpty()) {
+            if (! $installation || $installation->status !== 'INSTALLED') {
+                return back()->withErrors([
+                    'purgeClaims' => '当前店铺未连接 Shopify，无法确认线上优惠码已删除。本地申请数据未做修改。',
+                ]);
+            }
+
+            foreach ($discountIds as $discountId) {
+                try {
+                    $shopify->deleteDiscount($installation, (string) $discountId);
+                    StudentDiscountClaim::query()
+                        ->where('storeId', $storeId)
+                        ->where('shopifyDiscountId', $discountId)
+                        ->update(['shopifyDiscountId' => null, 'updatedAt' => now()]);
+                    $deletedDiscounts++;
+                } catch (Throwable $exception) {
+                    Log::warning('Student discount purge stopped after a Shopify deletion failure.', [
+                        'storeId' => $storeId,
+                        'discountId' => $discountId,
+                        'deletedDiscounts' => $deletedDiscounts,
+                        'exception' => $exception,
+                    ]);
+
+                    return back()->withErrors([
+                        'purgeClaims' => "Shopify 优惠码删除失败，清空已停止。已删除 {$deletedDiscounts} 个优惠码，本地申请记录仍保留，可稍后重试。",
+                    ]);
+                }
+            }
+        }
+
+        $claimIds = $claims->pluck('id')->all();
+        $evidencePaths = $claims->pluck('evidencePath')->filter()->all();
+        DB::transaction(fn () => StudentDiscountClaim::query()
+            ->where('storeId', $storeId)
+            ->whereIn('id', $claimIds)
+            ->delete());
+        if ($evidencePaths !== []) {
+            Storage::disk('local')->delete($evidencePaths);
+        }
+
+        return back()->with('success', "已删除当前店铺 {$claims->count()} 条申请数据及 {$deletedDiscounts} 个 Shopify 优惠码");
     }
 
     public function evidence(StudentDiscountClaim $claim, StoreContext $storeContext): StreamedResponse
