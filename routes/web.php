@@ -68,6 +68,8 @@ Route::middleware(['auth', 'verified', 'page.access'])->group(function () {
     Route::put('/student-discounts/settings', [StudentDiscountController::class, 'settings'])->name('student-discounts.settings');
     Route::put('/student-discounts/smtp', [StudentDiscountController::class, 'smtp'])->name('student-discounts.smtp');
     Route::delete('/student-discounts/smtp', [StudentDiscountController::class, 'resetSmtp'])->name('student-discounts.smtp.reset');
+    Route::post('/student-discounts/email-branding', [StudentDiscountController::class, 'emailBranding'])->name('student-discounts.email-branding');
+    Route::delete('/student-discounts/email-branding/logo', [StudentDiscountController::class, 'removeEmailLogo'])->name('student-discounts.email-branding.logo.destroy');
     Route::get('/student-discounts/claims/{claim}/evidence', [StudentDiscountController::class, 'evidence'])->name('student-discounts.evidence');
     Route::get('/plugins', fn (StoreContext $storeContext) => redirect(
         $storeContext->url('/plugins/macfox-student-discount'),

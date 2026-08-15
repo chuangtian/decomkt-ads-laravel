@@ -4,7 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -164,6 +167,64 @@ class BusinessManagementTest extends TestCase
                 ->where('smtp.password', 'environment-password')
                 ->where('smtp.fromAddress', 'mailer@example.com'),
             );
+    }
+
+    public function test_admin_can_save_and_remove_store_specific_email_branding(): void
+    {
+        config()->set('filesystems.disks.public.url', 'https://admin.example/storage');
+        Storage::fake('public');
+        $logo = UploadedFile::fake()->createWithContent(
+            'logo.png',
+            base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),
+        );
+
+        $this->actingAs($this->admin())
+            ->post('/student-discounts/email-branding', [
+                'brandName' => 'Macfox',
+                'logo' => $logo,
+                'shopUrl' => 'https://macfox.example/',
+                'supportUrl' => 'mailto:support@macfox.example',
+                'instagramUrl' => 'https://instagram.com/macfox',
+                'facebookUrl' => 'https://facebook.com/macfox',
+                'tiktokUrl' => 'https://tiktok.com/@macfox',
+                'youtubeUrl' => 'https://youtube.com/@macfox',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', '当前店铺的邮件品牌与链接已保存');
+
+        $logoPath = Crypt::decryptString(DB::table('StoreConfig')->where([
+            'storeId' => 'default-store',
+            'key' => 'STUDENT_DISCOUNT_LOGO_PATH',
+        ])->value('value'));
+        $logoUrl = Crypt::decryptString(DB::table('StoreConfig')->where([
+            'storeId' => 'default-store',
+            'key' => 'STUDENT_DISCOUNT_LOGO_URL',
+        ])->value('value'));
+
+        Storage::disk('public')->assertExists($logoPath);
+        $this->assertContains($logoUrl, [
+            "/storage/{$logoPath}",
+            "https://admin.example/storage/{$logoPath}",
+        ]);
+        $this->assertLessThanOrEqual(1, substr_count($logoUrl, 'https://'));
+        $this->actingAs(User::where('email', 'admin@example.com')->firstOrFail())
+            ->get('/default/plugins/macfox-student-discount')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('branding.brandName', 'Macfox')
+                ->where('branding.logoUrl', $logoUrl)
+                ->where('branding.shopUrl', 'https://macfox.example/')
+                ->where('branding.supportUrl', 'mailto:support@macfox.example'),
+            );
+
+        $this->delete('/student-discounts/email-branding/logo')
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', '邮件 Logo 已删除，可以重新上传');
+        Storage::disk('public')->assertMissing($logoPath);
+        $this->assertDatabaseMissing('StoreConfig', [
+            'storeId' => 'default-store',
+            'key' => 'STUDENT_DISCOUNT_LOGO_URL',
+        ]);
     }
 
     public function test_non_employee_cannot_open_dashboard(): void

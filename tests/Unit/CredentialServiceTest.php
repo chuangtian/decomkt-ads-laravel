@@ -60,4 +60,45 @@ class CredentialServiceTest extends TestCase
         $this->assertSame('store-password', $credentials->get('MAIL_PASSWORD', 'store-a'));
         $this->assertSame('environment-password', $credentials->get('MAIL_PASSWORD', 'store-b'));
     }
+
+    public function test_store_only_credentials_never_fall_back_to_system_values(): void
+    {
+        DB::table('SystemConfig')->insert([
+            'key' => 'STUDENT_DISCOUNT_LOGO_URL',
+            'value' => Crypt::encryptString('https://system.example/logo.png'),
+            'encrypted' => true,
+        ]);
+        DB::table('StoreConfig')->insert([
+            'storeId' => 'store-a',
+            'key' => 'STUDENT_DISCOUNT_LOGO_URL',
+            'value' => Crypt::encryptString('https://store-a.example/logo.png'),
+            'encrypted' => true,
+        ]);
+
+        $credentials = app(CredentialService::class);
+
+        $this->assertSame('https://store-a.example/logo.png', $credentials->getStore('STUDENT_DISCOUNT_LOGO_URL', 'store-a'));
+        $this->assertNull($credentials->getStore('STUDENT_DISCOUNT_LOGO_URL', 'store-b'));
+    }
+
+    public function test_forget_clears_the_store_only_credential_cache(): void
+    {
+        DB::table('StoreConfig')->insert([
+            'storeId' => 'store-a',
+            'key' => 'STUDENT_DISCOUNT_BRAND_NAME',
+            'value' => Crypt::encryptString('Old name'),
+            'encrypted' => true,
+        ]);
+        $credentials = app(CredentialService::class);
+        $this->assertSame('Old name', $credentials->getStore('STUDENT_DISCOUNT_BRAND_NAME', 'store-a'));
+
+        DB::table('StoreConfig')->where([
+            'storeId' => 'store-a',
+            'key' => 'STUDENT_DISCOUNT_BRAND_NAME',
+        ])->update(['value' => Crypt::encryptString('New name')]);
+
+        $credentials->forget('STUDENT_DISCOUNT_BRAND_NAME', 'store-a');
+
+        $this->assertSame('New name', $credentials->getStore('STUDENT_DISCOUNT_BRAND_NAME', 'store-a'));
+    }
 }

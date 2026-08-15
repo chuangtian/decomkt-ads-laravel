@@ -64,6 +64,36 @@ class CredentialService
         return $values;
     }
 
+    public function getStore(string $key, string $storeId): ?string
+    {
+        return $this->cache->remember(
+            "credentials-store-only:{$storeId}:{$key}",
+            now()->addMinutes(5),
+            function () use ($key, $storeId): ?string {
+                $row = DB::table('StoreConfig')->where(['storeId' => $storeId, 'key' => $key])->first();
+
+                return $row ? $this->decode($row->value, (bool) $row->encrypted, $key) : null;
+            },
+        );
+    }
+
+    /**
+     * @param  list<string>  $keys
+     * @return array<string, string>
+     */
+    public function manyStore(array $keys, string $storeId): array
+    {
+        $values = [];
+        foreach ($keys as $key) {
+            $value = $this->getStore($key, $storeId);
+            if ($value !== null && $value !== '') {
+                $values[$key] = $value;
+            }
+        }
+
+        return $values;
+    }
+
     public function require(string $key, string $storeId = 'default-store'): string
     {
         $value = $this->get($key, $storeId);
@@ -77,6 +107,7 @@ class CredentialService
     public function forget(string $key, string $storeId = 'default-store'): void
     {
         $this->cache->forget("credentials:{$storeId}:{$key}");
+        $this->cache->forget("credentials-store-only:{$storeId}:{$key}");
     }
 
     private function decode(string $value, bool $encrypted, string $key): string

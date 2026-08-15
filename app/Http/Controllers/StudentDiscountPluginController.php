@@ -31,6 +31,12 @@ class StudentDiscountPluginController extends Controller
         $mailKeys = ['MAIL_HOST', 'MAIL_PORT', 'MAIL_SCHEME', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_FROM_ADDRESS', 'MAIL_FROM_NAME'];
         $storeMailKeys = DB::table('StoreConfig')->where('storeId', $storeId)->whereIn('key', $mailKeys)->pluck('key')->all();
         $effectiveMail = $this->credentials->many($mailKeys, $storeId);
+        $brandKeys = [
+            'STUDENT_DISCOUNT_BRAND_NAME', 'STUDENT_DISCOUNT_LOGO_URL', 'STUDENT_DISCOUNT_SHOP_URL',
+            'STUDENT_DISCOUNT_SUPPORT_URL', 'STUDENT_DISCOUNT_INSTAGRAM_URL', 'STUDENT_DISCOUNT_FACEBOOK_URL',
+            'STUDENT_DISCOUNT_TIKTOK_URL', 'STUDENT_DISCOUNT_YOUTUBE_URL',
+        ];
+        $brand = $this->credentials->manyStore($brandKeys, $storeId);
 
         return Inertia::render('Plugins/StudentDiscount', [
             'store' => $storeContext->store(),
@@ -74,6 +80,16 @@ class StudentDiscountPluginController extends Controller
                 'fromAddress' => $effectiveMail['MAIL_FROM_ADDRESS'] ?? '',
                 'fromName' => $effectiveMail['MAIL_FROM_NAME'] ?? 'Macfox',
                 'hasPassword' => filled($effectiveMail['MAIL_PASSWORD'] ?? null),
+            ],
+            'branding' => [
+                'brandName' => $brand['STUDENT_DISCOUNT_BRAND_NAME'] ?? '',
+                'logoUrl' => $brand['STUDENT_DISCOUNT_LOGO_URL'] ?? null,
+                'shopUrl' => $brand['STUDENT_DISCOUNT_SHOP_URL'] ?? '',
+                'supportUrl' => $brand['STUDENT_DISCOUNT_SUPPORT_URL'] ?? '',
+                'instagramUrl' => $brand['STUDENT_DISCOUNT_INSTAGRAM_URL'] ?? '',
+                'facebookUrl' => $brand['STUDENT_DISCOUNT_FACEBOOK_URL'] ?? '',
+                'tiktokUrl' => $brand['STUDENT_DISCOUNT_TIKTOK_URL'] ?? '',
+                'youtubeUrl' => $brand['STUDENT_DISCOUNT_YOUTUBE_URL'] ?? '',
             ],
         ]);
     }

@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -20,6 +21,20 @@ class StudentDiscountController extends Controller
         'MAIL_HOST', 'MAIL_PORT', 'MAIL_SCHEME', 'MAIL_USERNAME', 'MAIL_PASSWORD',
         'MAIL_FROM_ADDRESS', 'MAIL_FROM_NAME',
     ];
+
+    private const BRAND_KEY_MAP = [
+        'brandName' => 'STUDENT_DISCOUNT_BRAND_NAME',
+        'shopUrl' => 'STUDENT_DISCOUNT_SHOP_URL',
+        'supportUrl' => 'STUDENT_DISCOUNT_SUPPORT_URL',
+        'instagramUrl' => 'STUDENT_DISCOUNT_INSTAGRAM_URL',
+        'facebookUrl' => 'STUDENT_DISCOUNT_FACEBOOK_URL',
+        'tiktokUrl' => 'STUDENT_DISCOUNT_TIKTOK_URL',
+        'youtubeUrl' => 'STUDENT_DISCOUNT_YOUTUBE_URL',
+    ];
+
+    private const LOGO_URL_KEY = 'STUDENT_DISCOUNT_LOGO_URL';
+
+    private const LOGO_PATH_KEY = 'STUDENT_DISCOUNT_LOGO_PATH';
 
     public function update(Request $request, StoreContext $storeContext): RedirectResponse
     {
@@ -118,6 +133,80 @@ class StudentDiscountController extends Controller
         }
 
         return back()->with('success', '已恢复使用系统默认邮件配置');
+    }
+
+    public function emailBranding(Request $request, StoreContext $storeContext, CredentialService $credentials): RedirectResponse
+    {
+        $data = $request->validate([
+            'brandName' => ['nullable', 'string', 'max:120'],
+            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'shopUrl' => ['nullable', 'url:http,https', 'max:2048'],
+            'supportUrl' => ['nullable', 'string', 'max:2048', 'regex:/^(?:https?:\/\/|mailto:)[^\s]+$/i'],
+            'instagramUrl' => ['nullable', 'url:http,https', 'max:2048'],
+            'facebookUrl' => ['nullable', 'url:http,https', 'max:2048'],
+            'tiktokUrl' => ['nullable', 'url:http,https', 'max:2048'],
+            'youtubeUrl' => ['nullable', 'url:http,https', 'max:2048'],
+        ]);
+        $storeId = $storeContext->id();
+        $oldLogoPath = $credentials->get(self::LOGO_PATH_KEY, $storeId);
+        $newLogoPath = null;
+
+        if ($request->hasFile('logo')) {
+            $newLogoPath = $request->file('logo')->storeAs(
+                "student-discount-branding/{$storeId}",
+                Str::uuid().'.'.$request->file('logo')->extension(),
+                'public',
+            );
+        }
+
+        DB::transaction(function () use ($data, $newLogoPath, $storeId): void {
+            foreach (self::BRAND_KEY_MAP as $field => $key) {
+                $value = trim((string) ($data[$field] ?? ''));
+                if ($value === '') {
+                    DB::table('StoreConfig')->where(['storeId' => $storeId, 'key' => $key])->delete();
+
+                    continue;
+                }
+
+                DB::table('StoreConfig')->updateOrInsert(
+                    ['storeId' => $storeId, 'key' => $key],
+                    ['value' => Crypt::encryptString($value), 'encrypted' => true, 'updatedAt' => now()],
+                );
+            }
+
+            if ($newLogoPath) {
+                $logoUrl = Storage::disk('public')->url($newLogoPath);
+                foreach ([self::LOGO_PATH_KEY => $newLogoPath, self::LOGO_URL_KEY => $logoUrl] as $key => $value) {
+                    DB::table('StoreConfig')->updateOrInsert(
+                        ['storeId' => $storeId, 'key' => $key],
+                        ['value' => Crypt::encryptString($value), 'encrypted' => true, 'updatedAt' => now()],
+                    );
+                }
+            }
+        });
+
+        foreach ([...array_values(self::BRAND_KEY_MAP), self::LOGO_PATH_KEY, self::LOGO_URL_KEY] as $key) {
+            $credentials->forget($key, $storeId);
+        }
+        if ($newLogoPath && $oldLogoPath && $oldLogoPath !== $newLogoPath) {
+            Storage::disk('public')->delete($oldLogoPath);
+        }
+
+        return back()->with('success', '当前店铺的邮件品牌与链接已保存');
+    }
+
+    public function removeEmailLogo(StoreContext $storeContext, CredentialService $credentials): RedirectResponse
+    {
+        $storeId = $storeContext->id();
+        $logoPath = $credentials->get(self::LOGO_PATH_KEY, $storeId);
+        DB::table('StoreConfig')->where('storeId', $storeId)->whereIn('key', [self::LOGO_PATH_KEY, self::LOGO_URL_KEY])->delete();
+        $credentials->forget(self::LOGO_PATH_KEY, $storeId);
+        $credentials->forget(self::LOGO_URL_KEY, $storeId);
+        if ($logoPath) {
+            Storage::disk('public')->delete($logoPath);
+        }
+
+        return back()->with('success', '邮件 Logo 已删除，可以重新上传');
     }
 
     public function evidence(StudentDiscountClaim $claim, StoreContext $storeContext): StreamedResponse

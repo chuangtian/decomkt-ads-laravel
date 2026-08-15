@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 type Claim = {
     id: string;
@@ -40,6 +40,16 @@ const props = defineProps<{
         fromName: string;
         hasPassword: boolean;
     };
+    branding: {
+        brandName: string;
+        logoUrl: string | null;
+        shopUrl: string;
+        supportUrl: string;
+        instagramUrl: string;
+        facebookUrl: string;
+        tiktokUrl: string;
+        youtubeUrl: string;
+    };
 }>();
 
 const tabs = ['申请审核', '折扣设置', '邮件设置', '数据分析', '帮助'];
@@ -73,6 +83,27 @@ const smtpForm = useForm({
     fromAddress: props.smtp.fromAddress,
     fromName: props.smtp.fromName || 'Macfox',
 });
+const brandingForm = useForm({
+    brandName: props.branding.brandName,
+    logo: null as File | null,
+    shopUrl: props.branding.shopUrl,
+    supportUrl: props.branding.supportUrl,
+    instagramUrl: props.branding.instagramUrl,
+    facebookUrl: props.branding.facebookUrl,
+    tiktokUrl: props.branding.tiktokUrl,
+    youtubeUrl: props.branding.youtubeUrl,
+});
+const logoInput = ref<HTMLInputElement | null>(null);
+const logoPreview = ref<string | null>(props.branding.logoUrl);
+let localLogoUrl: string | null = null;
+watch(
+    () => props.branding.logoUrl,
+    (value) => {
+        if (!brandingForm.logo) {
+            logoPreview.value = value;
+        }
+    },
+);
 const statusLabel = computed(() => {
     if (props.installation.installed) {
         return '已安装';
@@ -85,6 +116,20 @@ const statusLabel = computed(() => {
     return '未安装';
 });
 const showSmtpPassword = ref(false);
+const successNotice = ref('');
+let successNoticeTimer: ReturnType<typeof setTimeout> | null = null;
+const showSuccessNotice = (message: string) => {
+    successNotice.value = message;
+
+    if (successNoticeTimer) {
+        clearTimeout(successNoticeTimer);
+    }
+
+    successNoticeTimer = setTimeout(() => {
+        successNotice.value = '';
+        successNoticeTimer = null;
+    }, 3000);
+};
 const formatDate = (value: string | null) =>
     value ? new Date(value).toLocaleString('zh-CN') : '—';
 const statusText: Record<string, string> = {
@@ -101,22 +146,95 @@ const saveSettings = () => {
             .filter(Boolean);
     settings.discountProductIds = lines(productIds.value);
     settings.discountCollectionIds = lines(collectionIds.value);
-    settings.put('/student-discounts/settings', { preserveScroll: true });
+    settings.put('/student-discounts/settings', {
+        preserveScroll: true,
+        onSuccess: () => showSuccessNotice('折扣设置保存成功'),
+    });
 };
 const saveSmtp = () =>
-    smtpForm.put('/student-discounts/smtp', { preserveScroll: true });
+    smtpForm.put('/student-discounts/smtp', {
+        preserveScroll: true,
+        onSuccess: () => showSuccessNotice('邮件设置保存成功'),
+    });
 const resetSmtp = () => {
     if (!window.confirm('确定恢复系统默认邮件配置吗？')) {
         return;
     }
 
-    router.delete('/student-discounts/smtp', { preserveScroll: true });
+    router.delete('/student-discounts/smtp', {
+        preserveScroll: true,
+        onSuccess: () => showSuccessNotice('已恢复系统默认邮件设置'),
+    });
+};
+const chooseLogo = (event: Event) => {
+    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+
+    if (!file) {
+        return;
+    }
+
+    if (localLogoUrl) {
+        URL.revokeObjectURL(localLogoUrl);
+    }
+
+    brandingForm.logo = file;
+    localLogoUrl = URL.createObjectURL(file);
+    logoPreview.value = localLogoUrl;
+};
+const saveBranding = () =>
+    brandingForm.post('/student-discounts/email-branding', {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            brandingForm.logo = null;
+
+            if (logoInput.value) {
+                logoInput.value.value = '';
+            }
+
+            showSuccessNotice('邮件品牌与链接保存成功');
+        },
+    });
+const removeLogo = () => {
+    brandingForm.logo = null;
+    logoPreview.value = null;
+
+    if (logoInput.value) {
+        logoInput.value.value = '';
+    }
+
+    if (props.branding.logoUrl) {
+        router.delete('/student-discounts/email-branding/logo', {
+            preserveScroll: true,
+            onSuccess: () => showSuccessNotice('邮件 Logo 已删除'),
+        });
+    }
 };
 </script>
 
 <template>
     <Head title="学生折扣" />
     <div class="deco-page">
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="translate-y-2 opacity-0"
+            enter-to-class="translate-y-0 opacity-100"
+            leave-active-class="transition duration-200 ease-in"
+            leave-from-class="translate-y-0 opacity-100"
+            leave-to-class="translate-y-2 opacity-0"
+        >
+            <div
+                v-if="successNotice"
+                role="status"
+                class="fixed top-6 right-6 z-[100] flex items-center gap-3 rounded-lg border border-emerald-600 bg-emerald-950 px-5 py-4 text-sm font-semibold text-emerald-200 shadow-2xl"
+            >
+                <span
+                    class="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-sm text-white"
+                    >✓</span
+                >
+                {{ successNotice }}
+            </div>
+        </Transition>
         <div class="deco-header">
             <div>
                 <h1 class="deco-title">学生折扣</h1>
@@ -382,117 +500,245 @@ const resetSmtp = () => {
             </button>
         </form>
 
-        <form
-            v-else-if="activeTab === 2"
-            class="deco-card"
-            @submit.prevent="saveSmtp"
-        >
-            <div class="flex flex-wrap items-start justify-between gap-3">
+        <div v-else-if="activeTab === 2" class="space-y-4">
+            <form class="deco-card" @submit.prevent="saveSmtp">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 class="deco-card-title !mb-1">邮件设置</h2>
+                        <p class="text-sm text-[#929aa4]">
+                            当前来源：{{
+                                smtp.source === 'store'
+                                    ? '店铺独立配置'
+                                    : '系统默认配置'
+                            }}。店铺配置始终优先。
+                        </p>
+                    </div>
+                    <span
+                        class="rounded-full px-3 py-1 text-xs"
+                        :class="
+                            props.smtp.configured
+                                ? 'bg-emerald-950 text-emerald-400'
+                                : 'bg-amber-950 text-amber-300'
+                        "
+                        >{{ props.smtp.configured ? '已配置' : '未配置' }}</span
+                    >
+                </div>
+                <div class="mt-6 grid gap-5 lg:grid-cols-2">
+                    <label class="space-y-2"
+                        ><span>SMTP 主机</span
+                        ><input
+                            v-model="smtpForm.host"
+                            class="deco-input w-full"
+                            placeholder="smtp.gmail.com"
+                    /></label>
+                    <label class="space-y-2"
+                        ><span>端口</span
+                        ><input
+                            v-model.number="smtpForm.port"
+                            type="number"
+                            class="deco-input w-full"
+                    /></label>
+                    <label class="space-y-2"
+                        ><span>连接方式</span
+                        ><select
+                            v-model="smtpForm.scheme"
+                            class="deco-input w-full"
+                        >
+                            <option value="smtps">SMTPS / SSL</option>
+                            <option value="smtp">SMTP / STARTTLS</option>
+                        </select></label
+                    >
+                    <label class="space-y-2"
+                        ><span>用户名</span
+                        ><input
+                            v-model="smtpForm.username"
+                            class="deco-input w-full"
+                    /></label>
+                    <label class="space-y-2"
+                        ><span>应用专用密码</span>
+                        <div class="relative">
+                            <input
+                                v-model="smtpForm.password"
+                                :type="showSmtpPassword ? 'text' : 'password'"
+                                class="deco-input w-full pr-20"
+                                placeholder="请输入应用专用密码"
+                            />
+                            <button
+                                type="button"
+                                class="absolute inset-y-0 right-3 text-sm text-blue-400 hover:text-blue-300"
+                                @click="showSmtpPassword = !showSmtpPassword"
+                            >
+                                {{ showSmtpPassword ? '隐藏' : '显示' }}
+                            </button>
+                        </div></label
+                    >
+                    <label class="space-y-2"
+                        ><span>发件人邮箱</span
+                        ><input
+                            v-model="smtpForm.fromAddress"
+                            type="email"
+                            class="deco-input w-full"
+                    /></label>
+                    <label class="space-y-2 lg:col-span-2"
+                        ><span>发件人名称</span
+                        ><input
+                            v-model="smtpForm.fromName"
+                            class="deco-input w-full"
+                    /></label>
+                </div>
+                <div
+                    v-if="Object.keys(smtpForm.errors).length"
+                    class="mt-4 text-sm text-red-400"
+                >
+                    {{ Object.values(smtpForm.errors)[0] }}
+                </div>
+                <div class="mt-6 flex gap-3">
+                    <button
+                        class="deco-button primary"
+                        :disabled="smtpForm.processing"
+                    >
+                        保存店铺邮件配置</button
+                    ><button
+                        v-if="props.smtp.source === 'store'"
+                        type="button"
+                        class="deco-button"
+                        @click="resetSmtp"
+                    >
+                        恢复系统默认
+                    </button>
+                </div>
+            </form>
+
+            <form class="deco-card" @submit.prevent="saveBranding">
                 <div>
-                    <h2 class="deco-card-title !mb-1">邮件设置</h2>
+                    <h2 class="deco-card-title !mb-1">邮件品牌与链接</h2>
                     <p class="text-sm text-[#929aa4]">
-                        当前来源：{{
-                            smtp.source === 'store'
-                                ? '店铺独立配置'
-                                : '系统默认配置'
-                        }}。店铺配置始终优先。
+                        仅用于当前店铺。未设置的
+                        Logo、按钮或链接区域不会出现在邮件中。
                     </p>
                 </div>
-                <span
-                    class="rounded-full px-3 py-1 text-xs"
-                    :class="
-                        props.smtp.configured
-                            ? 'bg-emerald-950 text-emerald-400'
-                            : 'bg-amber-950 text-amber-300'
-                    "
-                    >{{ props.smtp.configured ? '已配置' : '未配置' }}</span
-                >
-            </div>
-            <div class="mt-6 grid gap-5 lg:grid-cols-2">
-                <label class="space-y-2"
-                    ><span>SMTP 主机</span
-                    ><input
-                        v-model="smtpForm.host"
-                        class="deco-input w-full"
-                        placeholder="smtp.gmail.com"
-                /></label>
-                <label class="space-y-2"
-                    ><span>端口</span
-                    ><input
-                        v-model.number="smtpForm.port"
-                        type="number"
-                        class="deco-input w-full"
-                /></label>
-                <label class="space-y-2"
-                    ><span>连接方式</span
-                    ><select
-                        v-model="smtpForm.scheme"
-                        class="deco-input w-full"
-                    >
-                        <option value="smtps">SMTPS / SSL</option>
-                        <option value="smtp">SMTP / STARTTLS</option>
-                    </select></label
-                >
-                <label class="space-y-2"
-                    ><span>用户名</span
-                    ><input
-                        v-model="smtpForm.username"
-                        class="deco-input w-full"
-                /></label>
-                <label class="space-y-2"
-                    ><span>应用专用密码</span>
-                    <div class="relative">
+
+                <div class="mt-6 grid gap-5 lg:grid-cols-2">
+                    <label class="space-y-2 lg:col-span-2">
+                        <span>品牌名称</span>
                         <input
-                            v-model="smtpForm.password"
-                            :type="showSmtpPassword ? 'text' : 'password'"
-                            class="deco-input w-full pr-20"
-                            placeholder="请输入应用专用密码"
+                            v-model="brandingForm.brandName"
+                            class="deco-input w-full"
+                            placeholder="例如：Macfox"
                         />
-                        <button
-                            type="button"
-                            class="absolute inset-y-0 right-3 text-sm text-blue-400 hover:text-blue-300"
-                            @click="showSmtpPassword = !showSmtpPassword"
+                    </label>
+
+                    <div class="space-y-2 lg:col-span-2">
+                        <span class="block">邮件 Logo</span>
+                        <input
+                            ref="logoInput"
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            class="hidden"
+                            @change="chooseLogo"
+                        />
+                        <div
+                            v-if="logoPreview"
+                            class="relative inline-flex min-h-32 min-w-64 items-center justify-center rounded-lg border border-[#454b54] bg-white p-6"
                         >
-                            {{ showSmtpPassword ? '隐藏' : '显示' }}
+                            <img
+                                :src="logoPreview"
+                                :alt="brandingForm.brandName || '邮件 Logo'"
+                                class="max-h-20 max-w-64 object-contain"
+                            />
+                            <button
+                                type="button"
+                                aria-label="删除 Logo"
+                                title="删除后重新上传"
+                                class="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full border border-[#59616b] bg-[#202326] text-xl leading-none text-white shadow hover:bg-red-600"
+                                @click="removeLogo"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <button
+                            v-else
+                            type="button"
+                            class="flex min-h-32 w-full items-center justify-center rounded-lg border border-dashed border-[#59616b] text-[#aab2bc] hover:border-blue-400 hover:text-blue-400"
+                            @click="logoInput?.click()"
+                        >
+                            点击上传 Logo（PNG、JPG 或 WebP，最大 2MB）
                         </button>
-                    </div></label
+                    </div>
+
+                    <label class="space-y-2">
+                        <span>商店链接</span>
+                        <input
+                            v-model="brandingForm.shopUrl"
+                            type="url"
+                            class="deco-input w-full"
+                            placeholder="https://example.com/"
+                        />
+                    </label>
+                    <label class="space-y-2">
+                        <span>客服链接</span>
+                        <input
+                            v-model="brandingForm.supportUrl"
+                            class="deco-input w-full"
+                            placeholder="mailto:support@example.com"
+                        />
+                    </label>
+                    <label class="space-y-2">
+                        <span>Instagram 链接</span>
+                        <input
+                            v-model="brandingForm.instagramUrl"
+                            type="url"
+                            class="deco-input w-full"
+                            placeholder="https://instagram.com/..."
+                        />
+                    </label>
+                    <label class="space-y-2">
+                        <span>Facebook 链接</span>
+                        <input
+                            v-model="brandingForm.facebookUrl"
+                            type="url"
+                            class="deco-input w-full"
+                            placeholder="https://facebook.com/..."
+                        />
+                    </label>
+                    <label class="space-y-2">
+                        <span>TikTok 链接</span>
+                        <input
+                            v-model="brandingForm.tiktokUrl"
+                            type="url"
+                            class="deco-input w-full"
+                            placeholder="https://tiktok.com/@..."
+                        />
+                    </label>
+                    <label class="space-y-2">
+                        <span>YouTube 链接</span>
+                        <input
+                            v-model="brandingForm.youtubeUrl"
+                            type="url"
+                            class="deco-input w-full"
+                            placeholder="https://youtube.com/@..."
+                        />
+                    </label>
+                </div>
+
+                <div
+                    v-if="Object.keys(brandingForm.errors).length"
+                    class="mt-4 text-sm text-red-400"
                 >
-                <label class="space-y-2"
-                    ><span>发件人邮箱</span
-                    ><input
-                        v-model="smtpForm.fromAddress"
-                        type="email"
-                        class="deco-input w-full"
-                /></label>
-                <label class="space-y-2 lg:col-span-2"
-                    ><span>发件人名称</span
-                    ><input
-                        v-model="smtpForm.fromName"
-                        class="deco-input w-full"
-                /></label>
-            </div>
-            <div
-                v-if="Object.keys(smtpForm.errors).length"
-                class="mt-4 text-sm text-red-400"
-            >
-                {{ Object.values(smtpForm.errors)[0] }}
-            </div>
-            <div class="mt-6 flex gap-3">
+                    {{ Object.values(brandingForm.errors)[0] }}
+                </div>
                 <button
-                    class="deco-button primary"
-                    :disabled="smtpForm.processing"
+                    class="deco-button primary mt-6"
+                    :disabled="brandingForm.processing"
                 >
-                    保存店铺邮件配置</button
-                ><button
-                    v-if="props.smtp.source === 'store'"
-                    type="button"
-                    class="deco-button"
-                    @click="resetSmtp"
-                >
-                    恢复系统默认
+                    {{
+                        brandingForm.processing
+                            ? '保存中…'
+                            : '保存邮件品牌与链接'
+                    }}
                 </button>
-            </div>
-        </form>
+            </form>
+        </div>
 
         <template v-else-if="activeTab === 3">
             <div class="grid gap-3 md:grid-cols-4">
