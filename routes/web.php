@@ -15,12 +15,20 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\StudentDiscountController;
+use App\Http\Controllers\StudentDiscountPluginController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
 use App\Services\Stores\StoreContext;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/api/public/student-discounts', [LegacyApiController::class, 'publicStudentDiscount']);
+Route::get('/shopify/app', fn () => response('Macfox Student Discount app is connected.', 200, [
+    'Content-Type' => 'text/plain; charset=UTF-8',
+    'Cache-Control' => 'no-store',
+]));
+
+Route::get('/shopify/auth/callback', fn () => redirect('/shopify/app')->withHeaders([
+    'Cache-Control' => 'no-store',
+]));
 
 Route::middleware(['auth', 'verified', 'page.access'])->group(function () {
     Route::get('/', fn (StoreContext $storeContext) => redirect($storeContext->url()))->name('dashboard');
@@ -57,6 +65,15 @@ Route::middleware(['auth', 'verified', 'page.access'])->group(function () {
     Route::post('/configuration/{scope}', [ConfigurationController::class, 'store'])->name('configuration.store');
     Route::delete('/configuration/{scope}/{key}', [ConfigurationController::class, 'destroy'])->name('configuration.destroy');
     Route::put('/student-discounts', [StudentDiscountController::class, 'update'])->name('student-discounts.update');
+    Route::put('/student-discounts/settings', [StudentDiscountController::class, 'settings'])->name('student-discounts.settings');
+    Route::put('/student-discounts/smtp', [StudentDiscountController::class, 'smtp'])->name('student-discounts.smtp');
+    Route::delete('/student-discounts/smtp', [StudentDiscountController::class, 'resetSmtp'])->name('student-discounts.smtp.reset');
+    Route::get('/student-discounts/claims/{claim}/evidence', [StudentDiscountController::class, 'evidence'])->name('student-discounts.evidence');
+    Route::get('/plugins', fn (StoreContext $storeContext) => redirect(
+        $storeContext->url('/plugins/macfox-student-discount'),
+        302,
+    ))->name('plugins.index');
+    Route::get('/plugins/macfox-student-discount', StudentDiscountPluginController::class)->name('plugins.student-discount');
     Route::post('/reputation/items', [ReputationController::class, 'store'])->name('reputation.items.store');
     Route::put('/reputation/items/{entity}/{id}', [ReputationController::class, 'update'])->name('reputation.items.update');
     Route::delete('/reputation/items/{entity}/{id}', [ReputationController::class, 'destroy'])->name('reputation.items.destroy');
@@ -73,8 +90,13 @@ Route::middleware(['auth', 'verified', 'page.access'])->group(function () {
             Route::get('/organic/seo', [SeoController::class, 'index'])->name('organic.seo');
             Route::get('/workspace/brand', BrandController::class)->name('workspace.brand');
             Route::get('/ecommerce/design', DesignController::class)->name('ecommerce.design');
+            Route::get('/plugins', fn (string $storeSlug) => redirect(
+                route('store.plugins.student-discount', ['storeSlug' => $storeSlug]),
+                302,
+            ))->name('plugins.index');
+            Route::get('/plugins/macfox-student-discount', StudentDiscountPluginController::class)->name('plugins.student-discount');
 
-            $special = ['/collab/kanban', '/collab/team', '/organic/seo', '/workspace/brand', '/ecommerce/design', '/employees', '/roles', '/stores', '/settings'];
+            $special = ['/collab/kanban', '/collab/team', '/organic/seo', '/workspace/brand', '/ecommerce/design', '/plugins', '/plugins/macfox-student-discount', '/employees', '/roles', '/stores', '/settings'];
             foreach (config('decomkt.pages') as $page) {
                 if (in_array($page['path'], $special, true)) {
                     continue;
@@ -83,7 +105,7 @@ Route::middleware(['auth', 'verified', 'page.access'])->group(function () {
             }
         });
 
-    $managedPaths = ['/employees', '/roles', '/stores', '/collab/kanban', '/collab/team', '/organic/seo', '/workspace/brand', '/ecommerce/design'];
+    $managedPaths = ['/employees', '/roles', '/stores', '/collab/kanban', '/collab/team', '/organic/seo', '/workspace/brand', '/ecommerce/design', '/plugins', '/plugins/macfox-student-discount'];
     foreach (config('decomkt.pages') as $page) {
         if (in_array($page['path'], $managedPaths, true)) {
             continue;

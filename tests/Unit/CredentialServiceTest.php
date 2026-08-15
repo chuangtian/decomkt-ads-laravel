@@ -29,4 +29,35 @@ class CredentialServiceTest extends TestCase
 
         $this->assertSame('plain-value', app(CredentialService::class)->get('PLAIN_KEY'));
     }
+
+    public function test_mail_credentials_fall_back_to_environment_backed_configuration(): void
+    {
+        config()->set('mail.mailers.smtp.host', 'smtp.env.example');
+        DB::table('SystemConfig')->insert([
+            'key' => 'MAIL_HOST',
+            'value' => Crypt::encryptString('smtp.legacy.example'),
+            'encrypted' => true,
+        ]);
+
+        $this->assertSame(
+            'smtp.env.example',
+            app(CredentialService::class)->get('MAIL_HOST', 'store-without-mail-settings'),
+        );
+    }
+
+    public function test_store_mail_credentials_override_environment_backed_configuration(): void
+    {
+        config()->set('mail.mailers.smtp.password', 'environment-password');
+        DB::table('StoreConfig')->insert([
+            'storeId' => 'store-a',
+            'key' => 'MAIL_PASSWORD',
+            'value' => Crypt::encryptString('store-password'),
+            'encrypted' => true,
+        ]);
+
+        $credentials = app(CredentialService::class);
+
+        $this->assertSame('store-password', $credentials->get('MAIL_PASSWORD', 'store-a'));
+        $this->assertSame('environment-password', $credentials->get('MAIL_PASSWORD', 'store-b'));
+    }
 }

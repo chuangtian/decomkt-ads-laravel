@@ -46,7 +46,7 @@ return [
             $item('团队成员', '/collab/team', 'users'),
         ]),
         $group('插件管理', 'blocks', [
-            $item('插件中心', '/plugins', 'blocks'),
+            $item('macfox-student-discount', '/plugins/macfox-student-discount', 'graduation-cap'),
         ]),
         $group('店铺设置', 'shopping-bag', [
             $item('基础与凭证', '/store-settings', 'settings'),

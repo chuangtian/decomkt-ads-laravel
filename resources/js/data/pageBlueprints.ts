@@ -394,11 +394,6 @@ export const pageBlueprints: Record<string, PageBlueprint> = {
         kind: 'report',
         subtitle: '基于各平台数据自动生成舆情周报',
     },
-    '/plugins': {
-        kind: 'plugin',
-        subtitle: '统一管理内部开发的店铺插件、配置入口和运行状态。',
-        metrics: zero(['已安装插件', '已启用', '需要配置']),
-    },
     '/store-settings': {
         kind: 'settings',
         subtitle:

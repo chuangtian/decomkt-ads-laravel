@@ -10,6 +10,17 @@ use Throwable;
 
 class CredentialService
 {
+    /** @var array<string, string> */
+    private const MAIL_CONFIG_PATHS = [
+        'MAIL_HOST' => 'mail.mailers.smtp.host',
+        'MAIL_PORT' => 'mail.mailers.smtp.port',
+        'MAIL_SCHEME' => 'mail.mailers.smtp.scheme',
+        'MAIL_USERNAME' => 'mail.mailers.smtp.username',
+        'MAIL_PASSWORD' => 'mail.mailers.smtp.password',
+        'MAIL_FROM_ADDRESS' => 'mail.from.address',
+        'MAIL_FROM_NAME' => 'mail.from.name',
+    ];
+
     public function __construct(private readonly CacheRepository $cache) {}
 
     public function get(string $key, string $storeId = 'default-store', ?string $default = null): ?string
@@ -19,7 +30,17 @@ class CredentialService
             now()->addMinutes(5),
             function () use ($key, $storeId, $default): ?string {
                 $row = DB::table('StoreConfig')->where(['storeId' => $storeId, 'key' => $key])->first();
-                $row ??= DB::table('SystemConfig')->where('key', $key)->first();
+                if ($row) {
+                    return $this->decode($row->value, (bool) $row->encrypted, $key);
+                }
+
+                if (isset(self::MAIL_CONFIG_PATHS[$key])) {
+                    $value = config(self::MAIL_CONFIG_PATHS[$key]);
+
+                    return $value !== null && $value !== '' ? (string) $value : $default;
+                }
+
+                $row = DB::table('SystemConfig')->where('key', $key)->first();
 
                 return $row ? $this->decode($row->value, (bool) $row->encrypted, $key) : $default;
             },

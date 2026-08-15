@@ -143,6 +143,29 @@ class BusinessManagementTest extends TestCase
         ]);
     }
 
+    public function test_student_discount_page_displays_environment_mail_defaults(): void
+    {
+        config()->set('mail.mailers.smtp.host', 'smtp.env.example');
+        config()->set('mail.mailers.smtp.port', 465);
+        config()->set('mail.mailers.smtp.scheme', 'smtps');
+        config()->set('mail.mailers.smtp.username', 'mailer@example.com');
+        config()->set('mail.mailers.smtp.password', 'environment-password');
+        config()->set('mail.from.address', 'mailer@example.com');
+        config()->set('mail.from.name', 'Macfox');
+
+        $this->actingAs($this->admin())
+            ->get('/default/plugins/macfox-student-discount')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Plugins/StudentDiscount')
+                ->where('smtp.source', 'system')
+                ->where('smtp.configured', true)
+                ->where('smtp.host', 'smtp.env.example')
+                ->where('smtp.password', 'environment-password')
+                ->where('smtp.fromAddress', 'mailer@example.com'),
+            );
+    }
+
     public function test_non_employee_cannot_open_dashboard(): void
     {
         $this->actingAs(User::factory()->create())->get('/')->assertForbidden();
